@@ -77,14 +77,26 @@ void _removeBackgroundSign(char* cmd_line) {
   cmd_line[str.find_last_not_of(WHITESPACE, idx) + 1] = 0;
 }
 
-// TODO: Add your implementation for classes in Commands.h 
+/****************************************************************************/
+/****************************************************************************/
+/*                        IMPLEMENTATION                                    */
 
 SmallShell::SmallShell() {
-// TODO: add your implementation
+  prompt = "smash";
+  factory.Add("pwd", [](std::string cmd_line) { return std::shared_ptr<Command>( new GetCurrDirCommand(cmd_line.c_str()));});
+  factory.Add("chprompt", [](std::string cmd_line) { return std::shared_ptr<Command>( new ChangePrompt(cmd_line.c_str()));});
+  factory.Add("showpid", [](std::string cmd_line) { return std::shared_ptr<Command>( new ShowPidCommand(cmd_line.c_str()));});
+  factory.Add("head", [](std::string cmd_line) { return std::shared_ptr<Command>( new HeadCommand(cmd_line.c_str()));});
+
 }
 
 SmallShell::~SmallShell() {
 // TODO: add your implementation
+}
+
+std::string SmallShell::getPrompt()
+{
+  return prompt;
 }
 
 /**
@@ -92,7 +104,7 @@ SmallShell::~SmallShell() {
 */
 Command * SmallShell::CreateCommand(const char* cmd_line) {
 	// For example:
-/*
+
   string cmd_s = _trim(string(cmd_line));
   string firstWord = cmd_s.substr(0, cmd_s.find_first_of(" \n"));
 
@@ -102,19 +114,20 @@ Command * SmallShell::CreateCommand(const char* cmd_line) {
   else if (firstWord.compare("showpid") == 0) {
     return new ShowPidCommand(cmd_line);
   }
-  else if ...
-  .....
+  else if (firstWord.compare("chprompt") == 0) {
+    
+  }
   else {
     return new ExternalCommand(cmd_line);
   }
-  */
+
   return nullptr;
 }
 
 void SmallShell::executeCommand(const char *cmd_line) {
   // TODO: Add your implementation here
   // for example:
-  // Command* cmd = CreateCommand(cmd_line);
-  // cmd->execute();
+  Command* cmd = CreateCommand(cmd_line);
+  cmd->execute();
   // Please note that you must fork smash process for some commands (e.g., external commands....)
 }

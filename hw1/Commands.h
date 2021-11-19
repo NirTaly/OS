@@ -2,6 +2,9 @@
 #define SMASH_COMMAND_H_
 
 #include <vector>
+#include <string>
+
+#include "factory.h"
 
 #define COMMAND_ARGS_MAX_LENGTH (200)
 #define COMMAND_MAX_ARGS (20)
@@ -48,7 +51,15 @@ class RedirectionCommand : public Command {
   //void cleanup() override;
 };
 
+class ChangePrompt : public BuiltInCommand {
+public:
+  ChangePrompt(const char* cmd_line);
+  virtual ~ChangePrompt() {}
+  void execute() override;
+};
+
 class ChangeDirCommand : public BuiltInCommand {
+public:
 // TODO: Add your data members public:
   ChangeDirCommand(const char* cmd_line, char** plastPwd);
   virtual ~ChangeDirCommand() {}
@@ -56,10 +67,12 @@ class ChangeDirCommand : public BuiltInCommand {
 };
 
 class GetCurrDirCommand : public BuiltInCommand {
- public:
+public:
   GetCurrDirCommand(const char* cmd_line);
   virtual ~GetCurrDirCommand() {}
-  void execute() override;
+  void execute() override { /*getcwd();*/ };
+private:
+  std::string last_dir;
 };
 
 class ShowPidCommand : public BuiltInCommand {
@@ -68,17 +81,6 @@ class ShowPidCommand : public BuiltInCommand {
   virtual ~ShowPidCommand() {}
   void execute() override;
 };
-
-class JobsList;
-class QuitCommand : public BuiltInCommand {
-// TODO: Add your data members public:
-  QuitCommand(const char* cmd_line, JobsList* jobs);
-  virtual ~QuitCommand() {}
-  void execute() override;
-};
-
-
-
 
 class JobsList {
  public:
@@ -98,6 +100,13 @@ class JobsList {
   JobEntry * getLastJob(int* lastJobId);
   JobEntry *getLastStoppedJob(int *jobId);
   // TODO: Add extra methods or modify exisitng ones as needed
+};
+
+class QuitCommand : public BuiltInCommand {
+// TODO: Add your data members public:
+  QuitCommand(const char* cmd_line, JobsList* jobs);
+  virtual ~QuitCommand() {}
+  void execute() override;
 };
 
 class JobsCommand : public BuiltInCommand {
@@ -141,13 +150,7 @@ class HeadCommand : public BuiltInCommand {
 
 
 class SmallShell {
- private:
-  // TODO: Add your data members
-  SmallShell();
- public:
-  Command *CreateCommand(const char* cmd_line);
-  SmallShell(SmallShell const&)      = delete; // disable copy ctor
-  void operator=(SmallShell const&)  = delete; // disable = operator
+public:
   static SmallShell& getInstance() // make SmallShell singleton
   {
     static SmallShell instance; // Guaranteed to be destroyed.
@@ -155,8 +158,19 @@ class SmallShell {
     return instance;
   }
   ~SmallShell();
+  
+  Command *CreateCommand(const char* cmd_line);
   void executeCommand(const char* cmd_line);
-  // TODO: add extra methods as needed
+  std::string getPrompt();
+
+  SmallShell(SmallShell const&)      = delete; // disable copy ctor
+  void operator=(SmallShell const&)  = delete; // disable = operator
+  
+private:
+  std::string prompt;
+  Factory<Command,std::string,std::string> factory;
+
+  SmallShell();
 };
 
 #endif //SMASH_COMMAND_H_
