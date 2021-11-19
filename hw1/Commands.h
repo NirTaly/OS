@@ -32,7 +32,7 @@ class ExternalCommand : public Command {
 public:
   ExternalCommand(std::vector<std::string> cmd_line) : Command(cmd_line) { }
   virtual ~ExternalCommand() = default;
-  void execute() override;
+  void execute() override {}
 };
 
 class PipeCommand : public Command {
@@ -140,7 +140,7 @@ class HeadCommand : public BuiltInCommand {
 public:
   HeadCommand(std::vector<std::string> cmd_line) : BuiltInCommand(cmd_line) { }
   virtual ~HeadCommand() = default;
-  void execute() override;
+  void execute() override {}
 };
 
 // option to add all commands to factory

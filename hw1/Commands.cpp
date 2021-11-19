@@ -166,5 +166,5 @@ void GetCurrDirCommand::execute()
 
 void ShowPidCommand::execute()
 {
-  std::cout << getpid() << std::endl;
+  std::cout << "smash pid is " << getpid() << std::endl;
 }
