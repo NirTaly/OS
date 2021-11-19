@@ -5,6 +5,8 @@
 #include <sstream>
 #include <sys/wait.h>
 #include <iomanip>
+#include <functional>
+
 #include "Commands.h"
 
 using namespace std;
@@ -39,15 +41,17 @@ string _trim(const std::string& s)
   return _rtrim(_ltrim(s));
 }
 
-int _parseCommandLine(const char* cmd_line, char** args) {
+int _parseCommandLine(const char* cmd_line, vector<std::string>& args) {
   FUNC_ENTRY()
   int i = 0;
   std::istringstream iss(_trim(string(cmd_line)).c_str());
-  for(std::string s; iss >> s; ) {
-    args[i] = (char*)malloc(s.length()+1);
-    memset(args[i], 0, s.length()+1);
-    strcpy(args[i], s.c_str());
-    args[++i] = NULL;
+  for(std::string s; iss >> s; i++) {
+    args.push_back(_trim(s));
+    // args[i] = (char*)malloc(s.length()+1);
+    // memset(args[i], 0, s.length()+1);
+    // strcpy(args[i], s.c_str());
+    // args[i] = s;
+    // args[++i] = NULL;
   }
   return i;
 
@@ -83,51 +87,84 @@ void _removeBackgroundSign(char* cmd_line) {
 
 SmallShell::SmallShell() {
   prompt = "smash";
-  factory.Add("pwd", [](std::string cmd_line) { return std::shared_ptr<Command>( new GetCurrDirCommand(cmd_line.c_str()));});
-  factory.Add("chprompt", [](std::string cmd_line) { return std::shared_ptr<Command>( new ChangePrompt(cmd_line.c_str()));});
-  factory.Add("showpid", [](std::string cmd_line) { return std::shared_ptr<Command>( new ShowPidCommand(cmd_line.c_str()));});
-  factory.Add("head", [](std::string cmd_line) { return std::shared_ptr<Command>( new HeadCommand(cmd_line.c_str()));});
-
+  built_in_factory.Add("pwd", [](vector<std::string> cmd_line) { return std::shared_ptr<Command>( new GetCurrDirCommand(cmd_line));});
+  built_in_factory.Add("showpid", [](vector<std::string> cmd_line) { return std::shared_ptr<Command>( new ShowPidCommand(cmd_line));});
+  built_in_factory.Add("head", [](vector<std::string> cmd_line) { return std::shared_ptr<Command>( new HeadCommand(cmd_line));});
 }
 
-SmallShell::~SmallShell() {
-// TODO: add your implementation
-}
-
-std::string SmallShell::getPrompt()
+const std::string& SmallShell::getPrompt()
 {
   return prompt;
+}
+
+void SmallShell::setPrompt(std::string new_prompt)
+{
+  prompt = new_prompt;
 }
 
 /**
 * Creates and returns a pointer to Command class which matches the given command line (cmd_line)
 */
-Command * SmallShell::CreateCommand(const char* cmd_line) {
+std::shared_ptr<Command> SmallShell::CreateCommand(vector<std::string> parsed_cmd) {
 	// For example:
 
-  string cmd_s = _trim(string(cmd_line));
-  string firstWord = cmd_s.substr(0, cmd_s.find_first_of(" \n"));
+  // string cmd_s = _trim(string(cmd_line));
+  // string firstWord = cmd_s.substr(0, cmd_s.find_first_of(" \n"));
+  std::shared_ptr<Command> cmp_obj;
+  string cmd = parsed_cmd[0];
 
-  if (firstWord.compare("pwd") == 0) {
-    return new GetCurrDirCommand(cmd_line);
+  try
+  {
+    return built_in_factory.Create(cmd, parsed_cmd);
   }
-  else if (firstWord.compare("showpid") == 0) {
-    return new ShowPidCommand(cmd_line);
+  catch(const BadKey& e)
+  {
+    if (cmd.compare("chprompt") == 0){
+      if (parsed_cmd.size() == 1) {
+        setPrompt("smash");
+      }
+      else if (parsed_cmd.size() >= 2){
+        setPrompt(parsed_cmd[1]);
+      }
+    }
+    // return make_shared<Command>(new ExternalCommand(parsed_cmd));
+    return std::shared_ptr<Command>( new ExternalCommand(parsed_cmd));
   }
-  else if (firstWord.compare("chprompt") == 0) {
-    
-  }
-  else {
-    return new ExternalCommand(cmd_line);
-  }
+  
+  // if (firstWord.compare("pwd") == 0) {
+  //   return new GetCurrDirCommand(cmd_line);
+  // }
+  // else if (firstWord.compare("showpid") == 0) {
+  //   return new ShowPidCommand(cmd_line);
+  // }
+  // else if (firstWord.compare("chprompt") == 0) {
+  // }
+  // else {
+  //   return new ExternalCommand(cmd_line);
+  // }
 
   return nullptr;
 }
 
-void SmallShell::executeCommand(const char *cmd_line) {
-  // TODO: Add your implementation here
-  // for example:
-  Command* cmd = CreateCommand(cmd_line);
+void SmallShell::executeCommand(std::string cmd_line) {
+  vector<std::string> parsed_cmd;
+  _parseCommandLine(cmd_line.c_str(), parsed_cmd);
+  shared_ptr<Command> cmd = CreateCommand(parsed_cmd);
   cmd->execute();
   // Please note that you must fork smash process for some commands (e.g., external commands....)
+}
+
+/************************************************************************************************************************/
+
+void GetCurrDirCommand::execute()
+{
+  char buf[COMMAND_ARGS_MAX_LENGTH] = { 0 };
+  std::cout << getcwd(buf,COMMAND_ARGS_MAX_LENGTH) << std::endl; 
+}
+
+/************************************************************************************************************************/
+
+void ShowPidCommand::execute()
+{
+  std::cout << getpid() << std::endl;
 }

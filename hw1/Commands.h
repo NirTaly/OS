@@ -10,144 +10,145 @@
 #define COMMAND_MAX_ARGS (20)
 
 class Command {
-// TODO: Add your data members
- public:
-  Command(const char* cmd_line);
-  virtual ~Command();
+public:
+  Command(std::vector<std::string> cmd_line) : cmd_line(cmd_line) {}
+  virtual ~Command() = default;
   virtual void execute() = 0;
+  std::vector<std::string>& getCmd() { return cmd_line; }
   //virtual void prepare();
   //virtual void cleanup();
   // TODO: Add your extra methods if needed
+private:
+  std::vector<std::string> cmd_line;
 };
 
 class BuiltInCommand : public Command {
- public:
-  BuiltInCommand(const char* cmd_line);
-  virtual ~BuiltInCommand() {}
+public:
+  BuiltInCommand(std::vector<std::string> cmd_line) : Command(cmd_line) { }
+  virtual ~BuiltInCommand() = default;
 };
 
 class ExternalCommand : public Command {
- public:
-  ExternalCommand(const char* cmd_line);
-  virtual ~ExternalCommand() {}
+public:
+  ExternalCommand(std::vector<std::string> cmd_line) : Command(cmd_line) { }
+  virtual ~ExternalCommand() = default;
   void execute() override;
 };
 
 class PipeCommand : public Command {
   // TODO: Add your data members
  public:
-  PipeCommand(const char* cmd_line);
-  virtual ~PipeCommand() {}
+  PipeCommand(std::vector<std::string> cmd_line) : Command(cmd_line) { }
+  virtual ~PipeCommand() = default;
   void execute() override;
 };
 
 class RedirectionCommand : public Command {
  // TODO: Add your data members
  public:
-  explicit RedirectionCommand(const char* cmd_line);
-  virtual ~RedirectionCommand() {}
+  explicit RedirectionCommand(std::vector<std::string> cmd_line) : Command(cmd_line) { }
+  virtual ~RedirectionCommand() = default;
   void execute() override;
   //void prepare() override;
   //void cleanup() override;
 };
 
-class ChangePrompt : public BuiltInCommand {
-public:
-  ChangePrompt(const char* cmd_line);
-  virtual ~ChangePrompt() {}
-  void execute() override;
-};
-
 class ChangeDirCommand : public BuiltInCommand {
 public:
 // TODO: Add your data members public:
-  ChangeDirCommand(const char* cmd_line, char** plastPwd);
-  virtual ~ChangeDirCommand() {}
+  ChangeDirCommand(std::vector<std::string> cmd_line, std::string plastPwd) : BuiltInCommand(cmd_line),lastPwd(plastPwd) { }
+  virtual ~ChangeDirCommand() = default;
   void execute() override;
+private:
+  std::string lastPwd;
 };
 
 class GetCurrDirCommand : public BuiltInCommand {
 public:
-  GetCurrDirCommand(const char* cmd_line);
-  virtual ~GetCurrDirCommand() {}
-  void execute() override { /*getcwd();*/ };
-private:
-  std::string last_dir;
+  GetCurrDirCommand(std::vector<std::string> cmd_line) : BuiltInCommand(cmd_line) { }
+  virtual ~GetCurrDirCommand() = default;
+  void execute() override; 
 };
 
 class ShowPidCommand : public BuiltInCommand {
  public:
-  ShowPidCommand(const char* cmd_line);
-  virtual ~ShowPidCommand() {}
+  ShowPidCommand(std::vector<std::string> cmd_line) : BuiltInCommand(cmd_line) { }
+  virtual ~ShowPidCommand() = default;
   void execute() override;
 };
 
-class JobsList {
- public:
-  class JobEntry {
-   // TODO: Add your data members
-  };
- // TODO: Add your data members
- public:
-  JobsList();
-  ~JobsList();
-  void addJob(Command* cmd, bool isStopped = false);
-  void printJobsList();
-  void killAllJobs();
-  void removeFinishedJobs();
-  JobEntry * getJobById(int jobId);
-  void removeJobById(int jobId);
-  JobEntry * getLastJob(int* lastJobId);
-  JobEntry *getLastStoppedJob(int *jobId);
-  // TODO: Add extra methods or modify exisitng ones as needed
-};
+// class JobsList {
+//  public:
+//   class JobEntry {
+//    // TODO: Add your data members
+//   };
+//  // TODO: Add your data members
+//  public:
+//   JobsList();
+//   ~JobsList();
+//   void addJob(Command* cmd, bool isStopped = false);
+//   void printJobsList();
+//   void killAllJobs();
+//   void removeFinishedJobs();
+//   JobEntry * getJobById(int jobId);
+//   void removeJobById(int jobId);
+//   JobEntry * getLastJob(int* lastJobId);
+//   JobEntry *getLastStoppedJob(int *jobId);
+//   // TODO: Add extra methods or modify exisitng ones as needed
+// };
 
-class QuitCommand : public BuiltInCommand {
-// TODO: Add your data members public:
-  QuitCommand(const char* cmd_line, JobsList* jobs);
-  virtual ~QuitCommand() {}
-  void execute() override;
-};
+// class QuitCommand : public BuiltInCommand {
+// // TODO: Add your data members public:
+//   QuitCommand(std::vector<std::string> cmd_line, JobsList* jobs) : BuiltInCommand(cmd_line) { }
+//   virtual ~QuitCommand() = default;
+//   void execute() override;
+// };
 
-class JobsCommand : public BuiltInCommand {
- // TODO: Add your data members
- public:
-  JobsCommand(const char* cmd_line, JobsList* jobs);
-  virtual ~JobsCommand() {}
-  void execute() override;
-};
+// class JobsCommand : public BuiltInCommand {
+//  // TODO: Add your data members
+//  public:
+//   JobsCommand(std::vector<std::string> cmd_line, JobsList* jobs);
+//   virtual ~JobsCommand() = default;
+//   void execute() override;
+// };
 
-class KillCommand : public BuiltInCommand {
- // TODO: Add your data members
- public:
-  KillCommand(const char* cmd_line, JobsList* jobs);
-  virtual ~KillCommand() {}
-  void execute() override;
-};
+// class KillCommand : public BuiltInCommand {
+//  // TODO: Add your data members
+//  public:
+//   KillCommand(std::vector<std::string> cmd_line, JobsList* jobs);
+//   virtual ~KillCommand() = default;
+//   void execute() override;
+// };
 
-class ForegroundCommand : public BuiltInCommand {
- // TODO: Add your data members
- public:
-  ForegroundCommand(const char* cmd_line, JobsList* jobs);
-  virtual ~ForegroundCommand() {}
-  void execute() override;
-};
+// class ForegroundCommand : public BuiltInCommand {
+//  // TODO: Add your data members
+//  public:
+//   ForegroundCommand(std::vector<std::string> cmd_line, JobsList* jobs);
+//   virtual ~ForegroundCommand() = default;
+//   void execute() override;
+// };
 
-class BackgroundCommand : public BuiltInCommand {
- // TODO: Add your data members
- public:
-  BackgroundCommand(const char* cmd_line, JobsList* jobs);
-  virtual ~BackgroundCommand() {}
-  void execute() override;
-};
+// class BackgroundCommand : public BuiltInCommand {
+//  // TODO: Add your data members
+//  public:
+//   BackgroundCommand(std::vector<std::string> cmd_line, JobsList* jobs);
+//   virtual ~BackgroundCommand() = default;
+//   void execute() override;
+// };
 
 class HeadCommand : public BuiltInCommand {
- public:
-  HeadCommand(const char* cmd_line);
-  virtual ~HeadCommand() {}
+public:
+  HeadCommand(std::vector<std::string> cmd_line) : BuiltInCommand(cmd_line) { }
+  virtual ~HeadCommand() = default;
   void execute() override;
 };
 
+// option to add all commands to factory
+struct Params
+{
+  std::string cmd_line;
+
+};
 
 class SmallShell {
 public:
@@ -157,18 +158,20 @@ public:
     // Instantiated on first use.
     return instance;
   }
-  ~SmallShell();
+  ~SmallShell() = default;
   
-  Command *CreateCommand(const char* cmd_line);
-  void executeCommand(const char* cmd_line);
-  std::string getPrompt();
+  std::shared_ptr<Command> CreateCommand(std::vector<std::string> parsed_cmd);
+  void executeCommand(std::string cmd_line);
+  
+  const std::string& getPrompt();
+  void setPrompt(std::string new_prompt);
 
   SmallShell(SmallShell const&)      = delete; // disable copy ctor
   void operator=(SmallShell const&)  = delete; // disable = operator
-  
+
 private:
   std::string prompt;
-  Factory<Command,std::string,std::string> factory;
+  Factory<Command,std::string,std::vector<std::string>> built_in_factory;
 
   SmallShell();
 };
