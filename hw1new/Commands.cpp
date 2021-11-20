@@ -86,21 +86,14 @@ Command::Command(const char* cmd_line) : cmd_line(cmd_line), pid(0) {
 /*****************************************************************************************************************/
 //-------------------SMASH IMPLEMENTATION----------------
 
-SmallShell::SmallShell() {
-// TODO: add your implementation
-  prompt = "smash";
-  pid = getpid();
-  prev_dir = new char[PATH_MAX];
+SmallShell::SmallShell() : prompt("smash"), pid(getpid()), job_list(new JobsList()), prev_dir(new char[PATH_MAX]) {
   strcpy(prev_dir,"");
-  job_list = new JobsList();
-
 }
 
 SmallShell::~SmallShell() {
   delete job_list;
-  delete prev_dir;
+  delete[] prev_dir;
 }
-
 
 void SmallShell::setPrompt(std::string new_prompt){
   prompt = new_prompt;
@@ -270,7 +263,7 @@ JobsList::JobEntry& JobsList::getJobById(size_t jobId)
   auto it = std::find_if(jobs.begin(), jobs.end(), [jobId](JobEntry const& job) { return job.getUID() == jobId; });
   if (it == jobs.end())
   {
-    throw NotFound(std::string(to_string(jobId)) + "does not exist");
+    throw NotFound("job-id " + std::string(to_string(jobId)) + " does not exist");
   }
 
   return *it;
@@ -323,31 +316,30 @@ void KillCommand::execute()
   {
     if (args_size != 3 || (args_size == 3 && *(args[1]) != '-'))
     {
-      throw invalid_argument("smash error: kill: invalid arguments");
+      throw invalid_argument("invalid arguments");
     }
 
-    size_t pcheck;
-    int signum = std::stoi(std::string(args[1]),&pcheck);
-    if (pcheck || signum < -32 || signum >= 0) throw invalid_argument("smash error: kill: invalid arguments");
+    int signum;
+    size_t jobID;
 
-    size_t jobID = std::stoull(std::string(args[2]),&pcheck);
-    if (pcheck) throw invalid_argument("smash error: kill: invalid arguments");
-
+    try{
+      signum = std::stoi(std::string(args[1]));
+      jobID = std::stoull(std::string(args[2]));
+    }catch(const std::exception&)
+    {
+      throw invalid_argument("invalid arguments");
+    }
+    
     JobsList* jlist = SmallShell::getInstance().getJobList();
   
     JobsList::JobEntry& job = jlist->getJobById(jobID);
     int retval = kill(job.getPID(),-signum);
-    if (retval == EINVAL || retval == EPERM || retval == ESRCH || retval <= 0)
+    if (retval == EINVAL || retval == EPERM || retval == ESRCH || retval <= 0 || signum < -32 || signum >= 0)
       perror("smash error: kill failed");
   }
   catch(const std::exception& e)
   {
     /****************************/
-    std::cout << e.what() << std::endl;
+    std::cout << "smash error: kill: " << e.what() << std::endl;
   }
-  // catch(const invalid_argument&)
-  // {
-  //   /****************************/
-  //   std::cout << "smash error: kill: invalid arguments" << std::endl;
-  // }
 }

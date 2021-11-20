@@ -176,8 +176,8 @@ enum JobState {RUNNING, STOP, DONE};
 
 class JobsList {
 public:
-  class Empty : std::exception{  };
-  class NotFound : std::exception
+  class Empty : public std::exception{  };
+  class NotFound : public std::exception
   {
   public:
     NotFound(std::string what): str(what) {}
