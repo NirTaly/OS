@@ -5,6 +5,7 @@
 #include <sstream>
 #include <sys/wait.h>
 #include <iomanip>
+#include <algorithm>
 #include "Commands.h"
 
 const std::string WHITESPACE = " \n\r\t\f\v";//from piazza
@@ -79,10 +80,10 @@ void _removeBackgroundSign(char* cmd_line) {
 
 // TODO: Add your implementation for classes in Commands.h 
 
-Command::Command(const char* cmd_line) : cmd_line(cmd_line){
+Command::Command(const char* cmd_line) : cmd_line(cmd_line), pid(0) {
   args_size = _parseCommandLine(cmd_line, args);
 }
-
+/*****************************************************************************************************************/
 //-------------------SMASH IMPLEMENTATION----------------
 
 SmallShell::SmallShell() {
@@ -91,10 +92,11 @@ SmallShell::SmallShell() {
   pid = getpid();
   prev_dir = new char[PATH_MAX];
   strcpy(prev_dir, "");
+  job_list = new JobsList();
 }
 
 SmallShell::~SmallShell() {
-// TODO: add your implementation
+  delete job_list;
 }
 
 
@@ -145,16 +147,13 @@ Command * SmallShell::CreateCommand(const char* cmd_line) {
 
   if (firstWord.compare("pwd") == 0) {
     return new GetCurrDirCommand(cmd_line);
+  else if (firstWord.compare("jobs") == 0) {
+    return new JobsCommand(cmd_line);
   }
-  else if (firstWord.compare("showpid") == 0) {
-    return new ShowPidCommand(cmd_line);
-  }
-  else if ...
-  .....
   else {
     return new ExternalCommand(cmd_line);
   }
-  */
+  
   return nullptr;
 }
 
@@ -169,6 +168,13 @@ void SmallShell::executeCommand(const char* cmd_line) {
   delete cmd;
 }
 
+JobsList* SmallShell::getJobList()
+{
+ return job_list;
+}
+
+/*****************************************************************************************************************/
+//-------------------Commands IMPLEMENTATION----------------
 Command::~Command(){
   for(int i = 0; i < args_size ; i++){
     free(args[i]);
@@ -230,4 +236,87 @@ void ChangeDirCommand::execute(){
   		return;
     }
 	strcpy(*prev_dir,curr_dir);
+/*****************************************************************************************************************/
+//-------------------JobList IMPLEMENTATION----------------
+void JobsList::addJob(Command* cmd, bool isStopped)
+{
+  string cmd_line(cmd->getCmd());
+  int job_pid = cmd->getPID();
+
+  jobs.push_back(JobEntry(cmd_line, job_i++, job_pid));
+}
+
+void JobsList::printJobsList()
+{
+  for (const JobEntry& job : jobs)
+  {
+    std::cout << '[' << job.getUID() << "] " << job.getCmd() << " : " << job.getPID() << " " << difftime(time(NULL),job.getStartTime());
+    if (job.getState() == JobState::STOP) // need to validate if vector stay sorted by id
+    {
+      std::cout << " (stopped)";
+    }
+    
+    std::cout << std::endl;
+  }
+}
+
+void JobsList::killAllJobs()
+{
+  for (const JobEntry& job : jobs)
+  {
+    kill(job.getPID(), SIGKILL);
+  }
+}
+
+void JobsList::removeFinishedJobs()
+{
+  std::remove_if(jobs.begin(), jobs.end(), [](JobEntry& job) { return job.getState() == JobState::DONE; });
+}
+
+JobsList::JobEntry& JobsList::getJobById(size_t jobId)
+{
+  auto it = std::find_if(jobs.begin(), jobs.end(), [jobId](JobEntry const& job) { return job.getUID() == jobId; });
+  if (it == jobs.end())
+  {
+    throw NotFound();
+  }
+
+  return *it;
+}
+
+void JobsList::removeJobById(size_t jobId)
+{
+  std::remove_if(jobs.begin(), jobs.end(), [jobId](JobEntry& job) { return job.getUID() == jobId; });
+}
+
+JobsList::JobEntry& JobsList::getLastJob()
+{
+  if (jobs.empty())
+  {
+    throw NotFound();
+  }
+
+  return jobs.back();
+}
+
+JobsList::JobEntry& JobsList::getLastStoppedJob()
+{
+  auto it = std::find_if(jobs.begin(), jobs.end(), [](JobEntry& job) { return job.getState() == JobState::STOP; });
+
+  if (jobs.empty() || it == jobs.end())
+  {
+    throw NotFound();
+  }
+
+  return *it;
+}
+/*****************************************************************************************************************/
+//-------------------Commands IMPLEMENTATION----------------
+
+void JobsCommand::execute()
+{
+  JobsList* jlist = SmallShell::getInstance().getJobList();
+
+  jlist->removeFinishedJobs();
+  jlist->printJobsList();
 }

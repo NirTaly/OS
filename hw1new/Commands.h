@@ -2,10 +2,16 @@
 #define SMASH_COMMAND_H_
 
 #include <vector>
+#include <time.h>
+#include <string>
+#include <exception>
 
 #define COMMAND_ARGS_MAX_LENGTH (200)
 #define COMMAND_MAX_ARGS (20)
 #define PATH_MAX (200)
+
+using std::string;
+using std::vector;
 
 class Command {
 // TODO: Add your data members
@@ -13,10 +19,16 @@ protected:
   const char* cmd_line;
   char* args[COMMAND_MAX_ARGS];
   int args_size;
+  int pid;
 public:
   Command(const char* cmd_line);
   virtual ~Command();
   virtual void execute() = 0;//pure virtual
+
+  const char* getCmd() const { return cmd_line; }
+  char** getArgs() { return args; }
+  int getPID() { return pid; }
+  void setPID(int new_pid) { pid = new_pid; }
   //virtual void prepare();
   //virtual void cleanup();
   // TODO: Add your extra methods if needed
@@ -92,33 +104,9 @@ public:
   void execute() override;
 };
 
-
-
-
-class JobsList {
- public:
-  class JobEntry {
-   // TODO: Add your data members
-  };
- // TODO: Add your data members
- public:
-  JobsList();
-  ~JobsList();
-  void addJob(Command* cmd, bool isStopped = false);
-  void printJobsList();
-  void killAllJobs();
-  void removeFinishedJobs();
-  JobEntry * getJobById(int jobId);
-  void removeJobById(int jobId);
-  JobEntry * getLastJob(int* lastJobId);
-  JobEntry *getLastStoppedJob(int *jobId);
-  // TODO: Add extra methods or modify exisitng ones as needed
-};
-
 class JobsCommand : public BuiltInCommand {
- // TODO: Add your data members
- public:
-  JobsCommand(const char* cmd_line, JobsList* jobs);
+public:
+  JobsCommand(const char* cmd_line) : BuiltInCommand(cmd_line) {}
   virtual ~JobsCommand() {}
   void execute() override;
 };
@@ -126,7 +114,7 @@ class JobsCommand : public BuiltInCommand {
 class KillCommand : public BuiltInCommand {
  // TODO: Add your data members
  public:
-  KillCommand(const char* cmd_line, JobsList* jobs);
+  KillCommand(const char* cmd_line) : BuiltInCommand(cmd_line) {}
   virtual ~KillCommand() {}
   void execute() override;
 };
@@ -134,7 +122,7 @@ class KillCommand : public BuiltInCommand {
 class ForegroundCommand : public BuiltInCommand {
  // TODO: Add your data members
  public:
-  ForegroundCommand(const char* cmd_line, JobsList* jobs);
+  ForegroundCommand(const char* cmd_line) : BuiltInCommand(cmd_line) {}
   virtual ~ForegroundCommand() {}
   void execute() override;
 };
@@ -142,25 +130,21 @@ class ForegroundCommand : public BuiltInCommand {
 class BackgroundCommand : public BuiltInCommand {
  // TODO: Add your data members
  public:
-  BackgroundCommand(const char* cmd_line, JobsList* jobs);
+  BackgroundCommand(const char* cmd_line) : BuiltInCommand(cmd_line) {}
   virtual ~BackgroundCommand() {}
   void execute() override;
 };
 
 class HeadCommand : public BuiltInCommand {
  public:
-  HeadCommand(const char* cmd_line);
+  HeadCommand(const char* cmd_line) : BuiltInCommand(cmd_line) {}
   virtual ~HeadCommand() {}
   void execute() override;
 };
 
+class JobsList;
 
 class SmallShell {
-private:
-  // TODO: Add your data members
-  std::string prompt;
-  int pid;
-  SmallShell();
 public:
   char* prev_dir;
   Command* CreateCommand(const char* cmd_line);
@@ -179,6 +163,53 @@ public:
   const std::string& getPrompt() const;
   int getPid() const;
   char** getPrevDir();
+  JobsList* getJobList();
+  
+private:
+  std::string prompt;
+  int pid;
+  JobsList* job_list;
+
+  SmallShell();
+};
+
+enum JobState {RUNNING, STOP, DONE};
+
+class JobsList {
+public:
+  class NotFound : std::exception {};
+
+  class JobEntry {
+  public:
+    JobEntry(string cmd,size_t id, int pid) : uid(id), pid(pid),start_time(time(NULL)), cmd_line(cmd), state(RUNNING) {}
+    ~JobEntry() = default;
+    time_t getStartTime() const { return start_time; }
+    string getCmd() const { return cmd_line; }
+    size_t getUID() const { return uid; }
+    JobState getState() const { return state; }
+    int getPID() const { return pid==0 ? SmallShell::getInstance().getPid() : pid; }
+  private:
+    size_t uid;
+    int pid;
+    time_t start_time;
+    string cmd_line;
+    JobState state;
+  };
+
+  JobsList() : job_i(1) { }
+  ~JobsList() = default;
+  void addJob(Command* cmd, bool isStopped = false);
+  void printJobsList();
+  void killAllJobs();
+  void removeFinishedJobs();
+  JobEntry& getJobById(size_t jobId);
+  void removeJobById(size_t jobId);
+  JobEntry& getLastJob();
+  JobEntry& getLastStoppedJob();
+
+private:
+  vector<JobEntry> jobs;
+  size_t job_i;
 };
 
 #endif //SMASH_COMMAND_H_
