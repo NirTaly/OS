@@ -198,10 +198,10 @@ public:
   void printJobsList();
   void killAllJobs();
   void removeFinishedJobs();
-  JobEntry& getJobById(size_t jobId) throw(NotFound);
-  void removeJobById(size_t jobId) ;
-  JobEntry& getLastJob() throw(NotFound);
-  JobEntry& getLastStoppedJob() throw(NotFound);
+  JobEntry& getJobById(size_t jobId);
+  void removeJobById(size_t jobId);
+  JobEntry& getLastJob();
+  JobEntry& getLastStoppedJob();
 
 private:
   vector<JobEntry> jobs;
