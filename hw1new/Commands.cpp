@@ -83,7 +83,7 @@ void _removeBackgroundSign(char* cmd_line) {
 Command::Command(const char* cmd_line) : cmd_line(cmd_line), pid(0) {
   args_size = _parseCommandLine(cmd_line, args);
 }
-
+/*****************************************************************************************************************/
 //-------------------SMASH IMPLEMENTATION----------------
 
 SmallShell::SmallShell() {
@@ -109,7 +109,6 @@ const std::string& SmallShell::getPrompt() const{
 int SmallShell::getPid() const{
   return pid;
 };
-//-------------------------------------------------------
 
 /**
 * Creates and returns a pointer to Command class which matches the given command line (cmd_line)
@@ -128,6 +127,11 @@ Command * SmallShell::CreateCommand(const char* cmd_line) {
   else if (firstWord.compare("pwd") == 0) {
     return new GetCurrDirCommand(cmd_line);
   }
+  else if (firstWord.compare("jobs") == 0) {
+    return new JobsCommand(cmd_line);
+  }
+  
+
   
   // For example:
 /*
@@ -160,6 +164,13 @@ void SmallShell::executeCommand(const char* cmd_line) {
   delete cmd;
 }
 
+JobsList* SmallShell::getJobList()
+{
+ return job_list;
+}
+
+/*****************************************************************************************************************/
+//-------------------Commands IMPLEMENTATION----------------
 Command::~Command(){
   for(int i = 0; i < args_size ; i++){
     free(args[i]);
@@ -193,7 +204,8 @@ void GetCurrDirCommand::execute(){
    }
 }
 
-/*************************************************************************************************/
+/*****************************************************************************************************************/
+//-------------------JobList IMPLEMENTATION----------------
 void JobsList::addJob(Command* cmd, bool isStopped)
 {
   string cmd_line(cmd->getCmd());
@@ -266,4 +278,13 @@ JobsList::JobEntry& JobsList::getLastStoppedJob()
 
   return *it;
 }
-/*************************************************************************************************/
+/*****************************************************************************************************************/
+//-------------------Commands IMPLEMENTATION----------------
+
+void JobsCommand::execute()
+{
+  JobsList* jlist = SmallShell::getInstance().getJobList();
+
+  jlist->removeFinishedJobs();
+  jlist->printJobsList();
+}

@@ -103,9 +103,8 @@ public:
 };
 
 class JobsCommand : public BuiltInCommand {
- // TODO: Add your data members
- public:
-  JobsCommand(const char* cmd_line, JobsList* jobs);
+public:
+  JobsCommand(const char* cmd_line) : BuiltInCommand(cmd_line) {}
   virtual ~JobsCommand() {}
   void execute() override;
 };
@@ -113,7 +112,7 @@ class JobsCommand : public BuiltInCommand {
 class KillCommand : public BuiltInCommand {
  // TODO: Add your data members
  public:
-  KillCommand(const char* cmd_line, JobsList* jobs);
+  KillCommand(const char* cmd_line) : BuiltInCommand(cmd_line) {}
   virtual ~KillCommand() {}
   void execute() override;
 };
@@ -121,7 +120,7 @@ class KillCommand : public BuiltInCommand {
 class ForegroundCommand : public BuiltInCommand {
  // TODO: Add your data members
  public:
-  ForegroundCommand(const char* cmd_line, JobsList* jobs);
+  ForegroundCommand(const char* cmd_line) : BuiltInCommand(cmd_line) {}
   virtual ~ForegroundCommand() {}
   void execute() override;
 };
@@ -129,14 +128,14 @@ class ForegroundCommand : public BuiltInCommand {
 class BackgroundCommand : public BuiltInCommand {
  // TODO: Add your data members
  public:
-  BackgroundCommand(const char* cmd_line, JobsList* jobs);
+  BackgroundCommand(const char* cmd_line) : BuiltInCommand(cmd_line) {}
   virtual ~BackgroundCommand() {}
   void execute() override;
 };
 
 class HeadCommand : public BuiltInCommand {
  public:
-  HeadCommand(const char* cmd_line);
+  HeadCommand(const char* cmd_line) : BuiltInCommand(cmd_line) {}
   virtual ~HeadCommand() {}
   void execute() override;
 };
@@ -160,7 +159,8 @@ public:
   void setPrompt(std::string new_prompt);
   const std::string& getPrompt() const;
   int getPid() const;
-
+  JobsList* getJobList();
+  
 private:
   std::string prompt;
   int pid;
