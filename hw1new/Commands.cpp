@@ -90,10 +90,11 @@ SmallShell::SmallShell() {
 // TODO: add your implementation
   prompt = "smash";
   pid = getpid();
+  job_list = new JobsList();
 }
 
 SmallShell::~SmallShell() {
-// TODO: add your implementation
+  delete job_list;
 }
 
 
@@ -228,7 +229,7 @@ void JobsList::removeFinishedJobs()
   std::remove_if(jobs.begin(), jobs.end(), [](JobEntry& job) { return job.getState() == JobState::DONE; });
 }
 
-JobsList::JobEntry& JobsList::getJobById(int jobId)
+JobsList::JobEntry& JobsList::getJobById(size_t jobId)
 {
   auto it = std::find_if(jobs.begin(), jobs.end(), [jobId](JobEntry const& job) { return job.getUID() == jobId; });
   if (it == jobs.end())
@@ -239,7 +240,7 @@ JobsList::JobEntry& JobsList::getJobById(int jobId)
   return *it;
 }
 
-void JobsList::removeJobById(int jobId)
+void JobsList::removeJobById(size_t jobId)
 {
   std::remove_if(jobs.begin(), jobs.end(), [jobId](JobEntry& job) { return job.getUID() == jobId; });
 }

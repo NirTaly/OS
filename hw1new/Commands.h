@@ -102,47 +102,6 @@ public:
   void execute() override;
 };
 
-
-enum JobState {RUNNING, STOP, DONE};
-
-
-class JobsList {
-public:
-  class NotFound : std::exception {};
-
-  class JobEntry {
-  public:
-    JobEntry(string cmd,size_t id, int pid) : uid(id), pid(pid),start_time(time(NULL)), cmd_line(cmd), state(RUNNING) {}
-    ~JobEntry() = default;
-    time_t getStartTime() const { return start_time; }
-    string getCmd() const { return cmd_line; }
-    size_t getUID() const { return uid; }
-    JobState getState() const { return state; }
-    int getPID() const { return pid==0 ? SmallShell::getInstance().getPid() : pid; }
-  private:
-    size_t uid;
-    int pid;
-    time_t start_time;
-    string cmd_line;
-    JobState state;
-  };
-
-  JobsList() : job_i(1) { }
-  ~JobsList() = default;
-  void addJob(Command* cmd, bool isStopped = false);
-  void printJobsList();
-  void killAllJobs();
-  void removeFinishedJobs();
-  JobEntry& getJobById(int jobId);
-  void removeJobById(int jobId);
-  JobEntry& getLastJob();
-  JobEntry& getLastStoppedJob();
-
-private:
-  vector<JobEntry> jobs;
-  size_t job_i;
-};
-
 class JobsCommand : public BuiltInCommand {
  // TODO: Add your data members
  public:
@@ -182,6 +141,7 @@ class HeadCommand : public BuiltInCommand {
   void execute() override;
 };
 
+class JobsList;
 
 class SmallShell {
 public:
@@ -204,9 +164,48 @@ public:
 private:
   std::string prompt;
   int pid;
-  JobsList job_list;
+  JobsList* job_list;
 
   SmallShell();
+};
+
+enum JobState {RUNNING, STOP, DONE};
+
+class JobsList {
+public:
+  class NotFound : std::exception {};
+
+  class JobEntry {
+  public:
+    JobEntry(string cmd,size_t id, int pid) : uid(id), pid(pid),start_time(time(NULL)), cmd_line(cmd), state(RUNNING) {}
+    ~JobEntry() = default;
+    time_t getStartTime() const { return start_time; }
+    string getCmd() const { return cmd_line; }
+    size_t getUID() const { return uid; }
+    JobState getState() const { return state; }
+    int getPID() const { return pid==0 ? SmallShell::getInstance().getPid() : pid; }
+  private:
+    size_t uid;
+    int pid;
+    time_t start_time;
+    string cmd_line;
+    JobState state;
+  };
+
+  JobsList() : job_i(1) { }
+  ~JobsList() = default;
+  void addJob(Command* cmd, bool isStopped = false);
+  void printJobsList();
+  void killAllJobs();
+  void removeFinishedJobs();
+  JobEntry& getJobById(size_t jobId);
+  void removeJobById(size_t jobId);
+  JobEntry& getLastJob();
+  JobEntry& getLastStoppedJob();
+
+private:
+  vector<JobEntry> jobs;
+  size_t job_i;
 };
 
 #endif //SMASH_COMMAND_H_
