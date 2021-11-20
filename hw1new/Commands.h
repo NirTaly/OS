@@ -55,6 +55,8 @@ class RedirectionCommand : public Command {
 
 class ChangeDirCommand : public BuiltInCommand {
 // TODO: Add your data members public:
+public:
+  char** prev_dir;
   ChangeDirCommand(const char* cmd_line, char** plastPwd);
   virtual ~ChangeDirCommand() {}
   void execute() override;
@@ -160,6 +162,7 @@ private:
   int pid;
   SmallShell();
 public:
+  char* prev_dir;
   Command* CreateCommand(const char* cmd_line);
   SmallShell(SmallShell const&)      = delete; // disable copy ctor
   void operator=(SmallShell const&)  = delete; // disable = operator
@@ -175,6 +178,7 @@ public:
   void setPrompt(std::string new_prompt);
   const std::string& getPrompt() const;
   int getPid() const;
+  char** getPrevDir();
 };
 
 #endif //SMASH_COMMAND_H_
