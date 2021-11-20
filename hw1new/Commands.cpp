@@ -288,9 +288,9 @@ JobsList::JobEntry& JobsList::getLastJob()
 
 JobsList::JobEntry& JobsList::getLastStoppedJob()
 {
-  auto it = std::find_if(jobs.begin(), jobs.end(), [](JobEntry& job) { return job.getState() == JobState::STOP; });
+  auto it = std::find_if(jobs.rbegin(), jobs.rend(), [](JobEntry& job) { return job.getState() == JobState::STOP; });
 
-  if (it == jobs.end())
+  if (it == jobs.rend())
   {
     throw NotFound("does not exist");
   }
@@ -347,5 +347,43 @@ void KillCommand::execute()
 
 void ForegroundCommand::execute()
 {
+  try
+  {
+    size_t jobID = 0;
+    int pid;
+    JobsList* jlist = SmallShell::getInstance().getJobList();
+    std::string cmd_line;
 
+    if (args_size == 2)
+    {
+      try{
+        jobID = std::stoull(std::string(args[1]));
+      }catch(const std::exception&)    {
+        throw invalid_argument("invalid arguments");
+      }
+
+      JobsList::JobEntry& job = jlist->getJobById(jobID);
+      pid = job.getPID();
+      cmd_line = job.getCmd();
+    }
+    else if (args_size == 1) 
+    {
+      JobsList::JobEntry& job = jlist->getLastJob();
+      pid = job.getPID();
+      cmd_line = job.getCmd();
+    }
+    else
+    {
+      invalid_argument("invalid arguments");
+    }
+    
+    std::cout << cmd_line << " : " << pid << " " << jobID << std::endl;
+    jlist->removeJobById(jobID);
+
+
+  }
+  catch(const std::exception& e)
+  {
+    std::cerr << e.what() << '\n';
+  }
 }
