@@ -78,10 +78,14 @@ void _removeBackgroundSign(char* cmd_line) {
   cmd_line[str.find_last_not_of(WHITESPACE, idx) + 1] = 0;
 }
 
-// TODO: Add your implementation for classes in Commands.h 
-
 Command::Command(const char* cmd_line) : cmd_line(cmd_line), pid(0) {
   args_size = _parseCommandLine(cmd_line, args);
+}
+
+Command::~Command(){
+  for(int i = 0; i < args_size ; i++){
+    free(args[i]);
+  }
 }
 /*****************************************************************************************************************/
 //-------------------SMASH IMPLEMENTATION----------------
@@ -110,7 +114,7 @@ int SmallShell::getPid() const{
 /**
 * Creates and returns a pointer to Command class which matches the given command line (cmd_line)
 */
-Command * SmallShell::CreateCommand(const char* cmd_line) {
+Command* SmallShell::CreateCommand(const char* cmd_line) {
 	string cmd_s = _trim(string(cmd_line));
   string firstWord = cmd_s.substr(0, cmd_s.find_first_of(" \n"));
 
@@ -135,18 +139,21 @@ Command * SmallShell::CreateCommand(const char* cmd_line) {
   else {
     return new ExternalCommand(cmd_line);
   }
-  
-  return nullptr;
 }
 
 void SmallShell::executeCommand(const char* cmd_line) {
-  // TODO: Add your implementation here
-  // for example:
-  // Command* cmd = CreateCommand(cmd_line);
-  // cmd->execute();
-  // Please note that you must fork smash process for some commands (e.g., external commands....)
+
   Command* cmd = CreateCommand(cmd_line);
-  cmd->execute();
+  try
+  {
+    cmd->execute();
+  }
+  catch(const std::exception& e)  
+  { 
+    delete cmd;
+    throw std::runtime_error(e.what());
+  }
+  
   delete cmd;
 }
 
@@ -161,11 +168,6 @@ char** SmallShell::getPrevDir()
 }
 /*****************************************************************************************************************/
 //-------------------Commands IMPLEMENTATION----------------
-Command::~Command(){
-  for(int i = 0; i < args_size ; i++){
-    free(args[i]);
-  }
-}
 
 void ChpromptCommand::execute(){
   SmallShell& smash = SmallShell::getInstance();
@@ -194,19 +196,19 @@ void GetCurrDirCommand::execute(){
 
 void ChangeDirCommand::execute(){
     if(args_size > 2){
-    	cerr<<"smash error: cd: too many arguments"<<endl;
+    	cerr<<"cd: too many arguments"<<endl;
     	return;
     }
     char curr_dir[PATH_MAX];
 	char* tmp = getcwd(curr_dir, sizeof(curr_dir));
     if (tmp == NULL) {
-		perror("smash error: getcwd failed");
+		perror("getcwd failed");
 		return;
     }
 
 	if(strcmp(args[1],"-") == 0){
 		if(strcmp(*prev_dir,"") == 0){
-			cerr<<"smash error: cd: OLDPWD not set"<<endl;
+			cerr<<"cd: OLDPWD not set"<<endl;
             return;
 		}
 		else if(chdir(*prev_dir) == -1){
@@ -339,7 +341,11 @@ void KillCommand::execute()
   }
   catch(const std::exception& e)
   {
-    /****************************/
-    std::cout << "smash error: kill: " << e.what() << std::endl;
+    throw runtime_error(std::string("kill: ") + std::string(e.what()));
   }
+}
+
+void ForegroundCommand::execute()
+{
+
 }
