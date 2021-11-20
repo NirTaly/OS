@@ -42,9 +42,9 @@ class BuiltInCommand : public Command {
 
 class ExternalCommand : public Command {
  public:
-  ExternalCommand(const char* cmd_line);
+  ExternalCommand(const char* cmd_line) : Command(cmd_line) { }
   virtual ~ExternalCommand() {}
-  void execute() override;
+  void execute() override {}
 };
 
 class PipeCommand : public Command {
@@ -66,10 +66,9 @@ class RedirectionCommand : public Command {
 };
 
 class ChangeDirCommand : public BuiltInCommand {
-// TODO: Add your data members public:
 public:
   char** prev_dir;
-  ChangeDirCommand(const char* cmd_line, char** plastPwd);
+  ChangeDirCommand(const char* cmd_line, char** plastPwd) : BuiltInCommand(cmd_line), prev_dir(plastPwd){}
   virtual ~ChangeDirCommand() {}
   void execute() override;
 };
@@ -146,7 +145,6 @@ class JobsList;
 
 class SmallShell {
 public:
-  char* prev_dir;
   Command* CreateCommand(const char* cmd_line);
   SmallShell(SmallShell const&)      = delete; // disable copy ctor
   void operator=(SmallShell const&)  = delete; // disable = operator
@@ -162,14 +160,15 @@ public:
   void setPrompt(std::string new_prompt);
   const std::string& getPrompt() const;
   int getPid() const;
-  char** getPrevDir();
   JobsList* getJobList();
-  
+  char** getPrevDir();
+
 private:
   std::string prompt;
   int pid;
   JobsList* job_list;
-
+  char* prev_dir;
+  
   SmallShell();
 };
 
@@ -177,7 +176,16 @@ enum JobState {RUNNING, STOP, DONE};
 
 class JobsList {
 public:
-  class NotFound : std::exception {};
+  class Empty : std::exception{  };
+  class NotFound : std::exception
+  {
+  public:
+    NotFound(std::string what): str(what) {}
+    virtual const char* what() const throw() {return str.c_str(); }
+  private:
+    std::string str;
+  };
+  
 
   class JobEntry {
   public:
@@ -187,7 +195,7 @@ public:
     string getCmd() const { return cmd_line; }
     size_t getUID() const { return uid; }
     JobState getState() const { return state; }
-    int getPID() const { return pid==0 ? SmallShell::getInstance().getPid() : pid; }
+    int getPID() const { return /* pid==0 ? SmallShell::getInstance().getPid() : */ pid; }
   private:
     size_t uid;
     int pid;

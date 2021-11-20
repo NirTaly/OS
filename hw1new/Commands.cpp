@@ -91,12 +91,14 @@ SmallShell::SmallShell() {
   prompt = "smash";
   pid = getpid();
   prev_dir = new char[PATH_MAX];
-  strcpy(prev_dir, "");
+  strcpy(prev_dir,"");
   job_list = new JobsList();
+
 }
 
 SmallShell::~SmallShell() {
   delete job_list;
+  delete prev_dir;
 }
 
 
@@ -112,18 +114,12 @@ int SmallShell::getPid() const{
   return pid;
 };
 
-char** SmallShell::getPrevDir(){
-  return &prev_dir;
-}
-//-------------------------------------------------------
-
 /**
 * Creates and returns a pointer to Command class which matches the given command line (cmd_line)
 */
 Command * SmallShell::CreateCommand(const char* cmd_line) {
-  string cmd_s = _trim(string(cmd_line));
+	string cmd_s = _trim(string(cmd_line));
   string firstWord = cmd_s.substr(0, cmd_s.find_first_of(" \n"));
-
 
   if (firstWord.compare("chprompt") == 0) {
     return new ChpromptCommand(cmd_line);
@@ -135,20 +131,13 @@ Command * SmallShell::CreateCommand(const char* cmd_line) {
     return new GetCurrDirCommand(cmd_line);
   }
   else if (firstWord.compare("cd") == 0) {
-    SmallShell& smash = SmallShell::getInstance();
-    char** prev_dir = smash.getPrevDir();
-    return new ChangeDirCommand(cmd_line, prev_dir);
+    return new ChangeDirCommand(cmd_line,&prev_dir);
   }
-  
-  // For example:
-/*
-  string cmd_s = _trim(string(cmd_line));
-  string firstWord = cmd_s.substr(0, cmd_s.find_first_of(" \n"));
-
-  if (firstWord.compare("pwd") == 0) {
-    return new GetCurrDirCommand(cmd_line);
   else if (firstWord.compare("jobs") == 0) {
     return new JobsCommand(cmd_line);
+  }
+  else if (firstWord.compare("kill") == 0) {
+    return new KillCommand(cmd_line);
   }
   else {
     return new ExternalCommand(cmd_line);
@@ -173,6 +162,10 @@ JobsList* SmallShell::getJobList()
  return job_list;
 }
 
+char** SmallShell::getPrevDir()
+{
+  return &prev_dir;
+}
 /*****************************************************************************************************************/
 //-------------------Commands IMPLEMENTATION----------------
 Command::~Command(){
@@ -182,32 +175,29 @@ Command::~Command(){
 }
 
 void ChpromptCommand::execute(){
-	SmallShell& smash = SmallShell::getInstance();
-	if(args_size > 1){
-		smash.setPrompt(args[1]);
-	}
-	else{
-		smash.setPrompt("smash");
-	}
+  SmallShell& smash = SmallShell::getInstance();
+  if(args_size > 1){
+    smash.setPrompt(args[1]);
+  }
+  else{
+    smash.setPrompt("smash");
+  }
 }
 
 void ShowPidCommand::execute(){
-	SmallShell& smash = SmallShell::getInstance();
-	cout<<"smash pid is "<<smash.getPid()<<endl;
+  SmallShell& smash = SmallShell::getInstance();
+  cout<<"smash pid is "<<smash.getPid()<<endl;
 }
 
 void GetCurrDirCommand::execute(){
-	char cwd_buff[PATH_MAX];
-	if (getcwd(cwd_buff, sizeof(cwd_buff)) != NULL) {
-		cout<<cwd_buff<<endl;
-  	}
-	else{
-		perror("smash error: getcwd failed");
-      	return;
+  char cwd_buff[PATH_MAX];
+  if (getcwd(cwd_buff, sizeof(cwd_buff)) != NULL) {
+    cout<<cwd_buff<<endl;
+  }
+  else{
+    perror("smash error: getcwd failed");
    }
 }
-
-ChangeDirCommand::ChangeDirCommand(const char* cmd_line, char** plastPwd) : BuiltInCommand(cmd_line), prev_dir(plastPwd){}
 
 void ChangeDirCommand::execute(){
     if(args_size > 2){
@@ -236,6 +226,8 @@ void ChangeDirCommand::execute(){
   		return;
     }
 	strcpy(*prev_dir,curr_dir);
+}
+
 /*****************************************************************************************************************/
 //-------------------JobList IMPLEMENTATION----------------
 void JobsList::addJob(Command* cmd, bool isStopped)
@@ -278,7 +270,7 @@ JobsList::JobEntry& JobsList::getJobById(size_t jobId)
   auto it = std::find_if(jobs.begin(), jobs.end(), [jobId](JobEntry const& job) { return job.getUID() == jobId; });
   if (it == jobs.end())
   {
-    throw NotFound();
+    throw NotFound(std::string(to_string(jobId)) + "does not exist");
   }
 
   return *it;
@@ -293,7 +285,7 @@ JobsList::JobEntry& JobsList::getLastJob()
 {
   if (jobs.empty())
   {
-    throw NotFound();
+    throw Empty();
   }
 
   return jobs.back();
@@ -303,9 +295,13 @@ JobsList::JobEntry& JobsList::getLastStoppedJob()
 {
   auto it = std::find_if(jobs.begin(), jobs.end(), [](JobEntry& job) { return job.getState() == JobState::STOP; });
 
-  if (jobs.empty() || it == jobs.end())
+  if (it == jobs.end())
   {
-    throw NotFound();
+    throw NotFound("does not exist");
+  }
+  else if (jobs.empty())
+  {
+    throw Empty();
   }
 
   return *it;
@@ -319,4 +315,39 @@ void JobsCommand::execute()
 
   jlist->removeFinishedJobs();
   jlist->printJobsList();
+}
+
+void KillCommand::execute()
+{
+  try
+  {
+    if (args_size != 3 || (args_size == 3 && *(args[1]) != '-'))
+    {
+      throw invalid_argument("smash error: kill: invalid arguments");
+    }
+
+    size_t pcheck;
+    int signum = std::stoi(std::string(args[1]),&pcheck);
+    if (pcheck || signum < -32 || signum >= 0) throw invalid_argument("smash error: kill: invalid arguments");
+
+    size_t jobID = std::stoull(std::string(args[2]),&pcheck);
+    if (pcheck) throw invalid_argument("smash error: kill: invalid arguments");
+
+    JobsList* jlist = SmallShell::getInstance().getJobList();
+  
+    JobsList::JobEntry& job = jlist->getJobById(jobID);
+    int retval = kill(job.getPID(),-signum);
+    if (retval == EINVAL || retval == EPERM || retval == ESRCH || retval <= 0)
+      perror("smash error: kill failed");
+  }
+  catch(const std::exception& e)
+  {
+    /****************************/
+    std::cout << e.what() << std::endl;
+  }
+  // catch(const invalid_argument&)
+  // {
+  //   /****************************/
+  //   std::cout << "smash error: kill: invalid arguments" << std::endl;
+  // }
 }
