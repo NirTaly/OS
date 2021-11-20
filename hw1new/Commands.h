@@ -4,6 +4,7 @@
 #include <vector>
 #include <time.h>
 #include <string>
+#include <exception>
 
 #define COMMAND_ARGS_MAX_LENGTH (200)
 #define COMMAND_MAX_ARGS (20)
@@ -104,8 +105,11 @@ public:
 
 enum JobState {RUNNING, STOP, DONE};
 
+
 class JobsList {
 public:
+  class NotFound : std::exception {};
+
   class JobEntry {
   public:
     JobEntry(string cmd,size_t id, int pid) : uid(id), pid(pid),start_time(time(NULL)), cmd_line(cmd), state(RUNNING) {}
@@ -131,8 +135,8 @@ public:
   void removeFinishedJobs();
   JobEntry& getJobById(int jobId);
   void removeJobById(int jobId);
-  JobEntry& getLastJob(int* lastJobId);
-  JobEntry& getLastStoppedJob(int *jobId);
+  JobEntry& getLastJob();
+  JobEntry& getLastStoppedJob();
 
 private:
   vector<JobEntry> jobs;

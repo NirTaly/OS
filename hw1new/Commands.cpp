@@ -231,10 +231,12 @@ void JobsList::removeFinishedJobs()
 JobsList::JobEntry& JobsList::getJobById(int jobId)
 {
   auto it = std::find_if(jobs.begin(), jobs.end(), [jobId](JobEntry const& job) { return job.getUID() == jobId; });
-  if (it != jobs.end())
+  if (it == jobs.end())
   {
-    
+    throw NotFound();
   }
+
+  return *it;
 }
 
 void JobsList::removeJobById(int jobId)
@@ -242,7 +244,24 @@ void JobsList::removeJobById(int jobId)
   std::remove_if(jobs.begin(), jobs.end(), [jobId](JobEntry& job) { return job.getUID() == jobId; });
 }
 
-JobsList::JobEntry& getLastJob(int* lastJobId)
+JobsList::JobEntry& JobsList::getLastJob()
 {
+  if (jobs.empty())
+  {
+    throw NotFound();
+  }
 
+  return jobs.back();
+}
+
+JobsList::JobEntry& JobsList::getLastStoppedJob()
+{
+  auto it = std::find_if(jobs.begin(), jobs.end(), [](JobEntry& job) { return job.getState() == JobState::STOP; });
+
+  if (jobs.empty() || it == jobs.end())
+  {
+    throw NotFound();
+  }
+
+  return *it;
 }
