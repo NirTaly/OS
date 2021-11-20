@@ -2,10 +2,15 @@
 #define SMASH_COMMAND_H_
 
 #include <vector>
+#include <time.h>
+#include <string>
 
 #define COMMAND_ARGS_MAX_LENGTH (200)
 #define COMMAND_MAX_ARGS (20)
 #define PATH_MAX (200)
+
+using std::string;
+using std::vector;
 
 class Command {
 // TODO: Add your data members
@@ -13,10 +18,15 @@ protected:
   const char* cmd_line;
   char* args[COMMAND_MAX_ARGS];
   int args_size;
+  int pid;
 public:
   Command(const char* cmd_line);
   virtual ~Command();
   virtual void execute() = 0;//pure virtual
+
+  const char* getCmd() const { return cmd_line; }
+  char** getArgs() { return args; }
+  int getPID() { return pid; }
   //virtual void prepare();
   //virtual void cleanup();
   // TODO: Add your extra methods if needed
@@ -91,17 +101,29 @@ public:
 };
 
 
-
+enum JobState {RUNNING, STOP, DONE};
 
 class JobsList {
- public:
+public:
   class JobEntry {
-   // TODO: Add your data members
+  public:
+    JobEntry(string cmd,size_t id, int pid) : uid(id), pid(pid),start_time(time(NULL)), cmd_line(cmd), state(RUNNING) {}
+    ~JobEntry() = default;
+    time_t getStartTime() const { return start_time; }
+    string getCmd() const { return cmd_line; }
+    size_t getUID() const { return uid; }
+    JobState getState() const { return state; }
+    int getPID() const { return pid; }
+  private:
+    size_t uid;
+    int pid;
+    time_t start_time;
+    string cmd_line;
+    JobState state;
   };
- // TODO: Add your data members
- public:
-  JobsList();
-  ~JobsList();
+
+  JobsList() : job_i(1) { }
+  ~JobsList() = default;
   void addJob(Command* cmd, bool isStopped = false);
   void printJobsList();
   void killAllJobs();
@@ -110,7 +132,10 @@ class JobsList {
   void removeJobById(int jobId);
   JobEntry * getLastJob(int* lastJobId);
   JobEntry *getLastStoppedJob(int *jobId);
-  // TODO: Add extra methods or modify exisitng ones as needed
+
+private:
+  vector<JobEntry> jobs;
+  size_t job_i;
 };
 
 class JobsCommand : public BuiltInCommand {
@@ -154,11 +179,6 @@ class HeadCommand : public BuiltInCommand {
 
 
 class SmallShell {
-private:
-  // TODO: Add your data members
-  std::string prompt;
-  int pid;
-  SmallShell();
 public:
   Command* CreateCommand(const char* cmd_line);
   SmallShell(SmallShell const&)      = delete; // disable copy ctor
@@ -175,6 +195,13 @@ public:
   void setPrompt(std::string new_prompt);
   const std::string& getPrompt() const;
   int getPid() const;
+
+private:
+  std::string prompt;
+  int pid;
+  JobsList job_list;
+
+  SmallShell();
 };
 
 #endif //SMASH_COMMAND_H_

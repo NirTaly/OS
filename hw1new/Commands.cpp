@@ -79,7 +79,7 @@ void _removeBackgroundSign(char* cmd_line) {
 
 // TODO: Add your implementation for classes in Commands.h 
 
-Command::Command(const char* cmd_line) : cmd_line(cmd_line){
+Command::Command(const char* cmd_line) : cmd_line(cmd_line), pid(0) {
   args_size = _parseCommandLine(cmd_line, args);
 }
 
@@ -189,4 +189,27 @@ void GetCurrDirCommand::execute(){
     //perror("getcwd() error");
     //return 1;
    }
+}
+
+/*************************************************************************************************/
+void JobsList::addJob(Command* cmd, bool isStopped)
+{
+  string cmd_line(cmd->getCmd());
+  int job_pid = cmd->getPID();
+
+  jobs.push_back(JobEntry(cmd_line, job_i++, job_pid));
+}
+
+void JobsList::printJobsList()
+{
+  for (const JobEntry& job : jobs)
+  {
+    std::cout << '[' << job.getUID() << "] " << job.getCmd() << " : " << job.getPID() << " " << difftime(time(NULL),job.getStartTime());
+    if (job.getState() == JobState::STOP)
+    {
+      std::cout << " (stopped)";
+    }
+    
+    std::cout << std::endl;
+  }
 }
