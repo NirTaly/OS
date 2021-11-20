@@ -205,7 +205,7 @@ void JobsList::printJobsList()
   for (const JobEntry& job : jobs)
   {
     std::cout << '[' << job.getUID() << "] " << job.getCmd() << " : " << job.getPID() << " " << difftime(time(NULL),job.getStartTime());
-    if (job.getState() == JobState::STOP)
+    if (job.getState() == JobState::STOP) // need to validate if vector stay sorted by id
     {
       std::cout << " (stopped)";
     }

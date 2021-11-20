@@ -27,6 +27,7 @@ public:
   const char* getCmd() const { return cmd_line; }
   char** getArgs() { return args; }
   int getPID() { return pid; }
+  void setPID(int new_pid) { pid = new_pid; }
   //virtual void prepare();
   //virtual void cleanup();
   // TODO: Add your extra methods if needed
@@ -113,7 +114,7 @@ public:
     string getCmd() const { return cmd_line; }
     size_t getUID() const { return uid; }
     JobState getState() const { return state; }
-    int getPID() const { return pid; }
+    int getPID() const { return pid==0 ? SmallShell::getInstance().getPid() : pid; }
   private:
     size_t uid;
     int pid;
