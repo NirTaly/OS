@@ -5,6 +5,7 @@
 #include <sstream>
 #include <sys/wait.h>
 #include <iomanip>
+#include <algorithm>
 #include "Commands.h"
 
 const std::string WHITESPACE = " \n\r\t\f\v";//from piazza
@@ -212,4 +213,36 @@ void JobsList::printJobsList()
     
     std::cout << std::endl;
   }
+}
+
+void JobsList::killAllJobs()
+{
+  for (const JobEntry& job : jobs)
+  {
+    kill(job.getPID(), SIGKILL);
+  }
+}
+
+void JobsList::removeFinishedJobs()
+{
+  std::remove_if(jobs.begin(), jobs.end(), [](JobEntry& job) { return job.getState() == JobState::DONE; });
+}
+
+JobsList::JobEntry& JobsList::getJobById(int jobId)
+{
+  auto it = std::find_if(jobs.begin(), jobs.end(), [jobId](JobEntry const& job) { return job.getUID() == jobId; });
+  if (it != jobs.end())
+  {
+    
+  }
+}
+
+void JobsList::removeJobById(int jobId)
+{
+  std::remove_if(jobs.begin(), jobs.end(), [jobId](JobEntry& job) { return job.getUID() == jobId; });
+}
+
+JobsList::JobEntry& getLastJob(int* lastJobId)
+{
+
 }

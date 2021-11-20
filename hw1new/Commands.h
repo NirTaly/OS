@@ -129,10 +129,10 @@ public:
   void printJobsList();
   void killAllJobs();
   void removeFinishedJobs();
-  JobEntry * getJobById(int jobId);
+  JobEntry& getJobById(int jobId);
   void removeJobById(int jobId);
-  JobEntry * getLastJob(int* lastJobId);
-  JobEntry *getLastStoppedJob(int *jobId);
+  JobEntry& getLastJob(int* lastJobId);
+  JobEntry& getLastStoppedJob(int *jobId);
 
 private:
   vector<JobEntry> jobs;
