@@ -118,7 +118,6 @@ int SmallShell::getPid() const{
 Command* SmallShell::CreateCommand(const char* cmd_line) {
   string cmd_s = _trim(string(cmd_line));
   string firstWord = cmd_s.substr(0, cmd_s.find_first_of(" \n"));
-  last_cmd_not_found = false;
   if(strstr(cmd_line, ">") != NULL) {//redirection command
     return new RedirectionCommand(cmd_line);
   }
@@ -296,6 +295,15 @@ void RedirectionCommand::execute(){
 	}
 	out_file = str_cmd.substr(i+1+is_append,str_cmd.size()-1-i-is_append);
 	left_cmd = _trim(left_cmd);
+
+	//ignore &
+	for(int i = left_cmd.size()-1; i > 0; i--){
+        if(left_cmd[i] == '&'){
+            left_cmd[i] = ' ';
+            break;
+        }
+    }
+
 	out_file = _trim(out_file);
 	//now we want to close stdout, change it to point to the file that the output has to go to,
 	//create and execute the given command. but we want the restore fdt(1) to point to the screen

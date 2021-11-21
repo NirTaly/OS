@@ -162,7 +162,6 @@ public:
   int getPid() const;
   JobsList* getJobList();
   char** getPrevDir();
-  bool last_cmd_not_found;
 private:
   std::string prompt;
   int pid;
