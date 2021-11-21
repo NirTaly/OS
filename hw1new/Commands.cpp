@@ -199,6 +199,9 @@ void ChangeDirCommand::execute(){
     	cerr<<"cd: too many arguments"<<endl;
     	return;
     }
+	else if(args_size == 1){
+		return;
+	}
     char curr_dir[PATH_MAX];
 	char* tmp = getcwd(curr_dir, sizeof(curr_dir));
     if (tmp == NULL) {
@@ -223,6 +226,52 @@ void ChangeDirCommand::execute(){
 	strcpy(*prev_dir,curr_dir);
 }
 
+
+void ExternalCommand::execute(){
+	int pid = fork();
+	if(pid < 0){
+		perror("smash error: fork failed");
+        return;
+	}
+	char clean_cmd_copy[COMMAND_ARGS_MAX_LENGTH];//just because passing cmd_line to helper functions doesnt work
+	strcpy(clean_cmd_copy,cmd_line);
+	bool bg_run = false;
+	if(_isBackgroundComamnd(clean_cmd_copy)){
+        bg_run = true;
+		_removeBackgroundSign(clean_cmd_copy);
+	}
+	if(pid == 0){
+		if(setpgrp() != -1){
+			char* const execv_argv[4] = {(char*)"/bin/bash",(char*)"-c",clean_cmd_copy,nullptr}; 
+			if(execv(execv_argv[0],execv_argv) == -1){
+				perror("smash error: exec failed");
+            	return;
+			}
+		}
+		else{
+            perror("smash error: setpgrp failed");
+            return;
+		}
+	}
+	else{
+		if(bg_run == true){
+			//parent do not need to wait
+			JobsList* jlist = SmallShell::getInstance().getJobList();
+			int tmp_pid = this->pid; 
+			this->pid = pid;//to get son's pid and not the parent's
+			jlist->addJob(this);	
+			this->pid = tmp_pid;//restore shell pid
+		}
+		else{//parent(shell) need to wait
+			int status;
+			if(waitpid(pid,&status,WUNTRACED) == -1 ){//WUNTRACED make father stop waiting when the son was stopped
+                perror("smash error: waitpid failed");
+                return;
+            }
+		}
+		return;
+	}
+}
 /*****************************************************************************************************************/
 //-------------------JobList IMPLEMENTATION----------------
 void JobsList::addJob(Command* cmd, bool isStopped)
@@ -256,7 +305,9 @@ void JobsList::killAllJobs()
 }
 
 void JobsList::removeFinishedJobs()
-{
+{//not so sure what is happening here
+ //we iterate over the list and delete each job that hold the condition (waitpid(jobid,nullptr,WNOHANG) == jobid)
+ //since waitpid(jobid,nullptr,WNOHANG) return jobid if it exited already or 0 if it didnt
   std::remove_if(jobs.begin(), jobs.end(), [](JobEntry& job) { return job.getState() == JobState::DONE; });
 }
 

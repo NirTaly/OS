@@ -44,7 +44,7 @@ class ExternalCommand : public Command {
  public:
   ExternalCommand(const char* cmd_line) : Command(cmd_line) { }
   virtual ~ExternalCommand() {}
-  void execute() override {}
+  void execute() override;
 };
 
 class PipeCommand : public Command {
