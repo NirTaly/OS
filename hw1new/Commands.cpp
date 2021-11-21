@@ -308,7 +308,17 @@ void JobsList::removeFinishedJobs()
 {//not so sure what is happening here
  //we iterate over the list and delete each job that hold the condition (waitpid(jobid,nullptr,WNOHANG) == jobid)
  //since waitpid(jobid,nullptr,WNOHANG) return jobid if it exited already or 0 if it didnt
+//  vector<JobEntry> new_jobs;
+//  for(unsigned int i = 0; i < jobs.size(); i++){
+// 	 if(waitpid(jobs[i].getUID(), nullptr,WNOHANG)  ){
+//         new_jobs.push_back(jobs[i]);
+//     }
+//  }
+//  jobs = new_jobs;
+	// std::remove_if(jobs.begin(), jobs.end(), [](JobEntry& job) { return job.getUID() == waitpid(job.getUID(),nullptr,WNOHANG); });
   std::remove_if(jobs.begin(), jobs.end(), [](JobEntry& job) { return job.getState() == JobState::DONE; });
+
+
 }
 
 JobsList::JobEntry& JobsList::getJobById(size_t jobId)
