@@ -118,7 +118,11 @@ int SmallShell::getPid() const{
 Command* SmallShell::CreateCommand(const char* cmd_line) {
   string cmd_s = _trim(string(cmd_line));
   string firstWord = cmd_s.substr(0, cmd_s.find_first_of(" \n"));
-  if(strstr(cmd_line, ">") != NULL) {//redirection command
+  
+  if(strstr(cmd_line, "|") != NULL){
+	return new PipeCommand(cmd_line);  
+  }
+  else if(strstr(cmd_line, ">") != NULL) {//redirection command
     return new RedirectionCommand(cmd_line);
   }
   else if (firstWord.compare("chprompt") == 0) {
@@ -171,6 +175,55 @@ char** SmallShell::getPrevDir()
 }
 /*****************************************************************************************************************/
 //-------------------Commands IMPLEMENTATION----------------
+
+RedirectionCommand::RedirectionCommand(const char* cmd_line) : Command(cmd_line), is_append(0) {
+	full_str_cmd = cmd_line;
+	const char* p = strstr(cmd_line, ">"); 
+	int i = 0;
+	while((cmd_line+i) != p){
+		i++;
+	}
+	if(i != 0){
+		left_cmd = full_str_cmd.substr(0,i);
+	}
+	if(strstr(cmd_line, ">>") != NULL){
+		is_append = 1;
+	}
+	out_file = full_str_cmd.substr(i+1+is_append,full_str_cmd.size()-1-i-is_append);
+	left_cmd = _trim(left_cmd);
+
+	//ignore &
+	for(int i = left_cmd.size()-1; i > 0; i--){
+        if(left_cmd[i] == '&'){
+            left_cmd[i] = ' ';
+            break;
+        }
+    }
+
+	out_file = _trim(out_file);
+}
+
+PipeCommand::PipeCommand(const char* cmd_line) : Command(cmd_line){
+	full_str_cmd = cmd_line;
+	const char* p = strstr(cmd_line, "|"); 
+	unsigned int i = 0;
+	while((cmd_line+i) != p){
+		i++;
+	}
+	if(i != 0){
+		first_cmd = full_str_cmd.substr(0,i);
+	}
+	//ignore &
+	if(i+1 < full_str_cmd.size() && full_str_cmd[i+1] == '&'){
+		second_cmd = full_str_cmd.substr(i+2,full_str_cmd.size()-2-i);
+	}
+	else{
+		second_cmd = full_str_cmd.substr(i+1,full_str_cmd.size()-1-i);
+	}
+
+	first_cmd = _trim(first_cmd);
+	second_cmd = _trim(second_cmd);
+}
 
 void ChpromptCommand::execute(){
   SmallShell& smash = SmallShell::getInstance();
@@ -278,6 +331,8 @@ void ExternalCommand::execute(){
 }
 
 void RedirectionCommand::execute(){
+	/*CAN PROBABLY DELETE THIS PART
+
 	string str_cmd = cmd_line;
 	string left_cmd;
 	string out_file;
@@ -305,7 +360,9 @@ void RedirectionCommand::execute(){
     }
 
 	out_file = _trim(out_file);
-	//now we want to close stdout, change it to point to the file that the output has to go to,
+	*/
+	
+	//we want to close stdout, change it to point to the file that the output has to go to,
 	//create and execute the given command. but we want the restore fdt(1) to point to the screen
 	//at the end of the process so we have to duplicate it.
 	int fdt_screen_ptr = dup(1);
@@ -330,8 +387,9 @@ void RedirectionCommand::execute(){
 		return;
 	}
 	SmallShell& smash = SmallShell::getInstance();
-	smash.CreateCommand(left_cmd.c_str())->execute();
-	//note: command may fail and still a file will be creaeted, but it's the same in bash
+	smash.executeCommand(left_cmd.c_str());
+	// smash.CreateCommand(left_cmd.c_str())->execute();
+	//note: command may fail and still a file will be created, but it's the same in bash
 	
 	//reset stdout to point to the screen obj file
 	if(dup2(fdt_screen_ptr,1)  == -1){
@@ -343,7 +401,41 @@ void RedirectionCommand::execute(){
 		perror("smash error: dup2 failed");
 		return;
 	}
+	if(close(fdt_screen_ptr) == -1){
+		perror("smash error: dup2 failed");
+		return;
+	}
 }
+
+void PipeCommand::execute(){
+/**
+*Idea:
+*pipeline command format is command1 | command2
+*1)smash create the pipeline
+*2)smash uses fork
+*3)smash(parent) run command1 and output it to the buffer
+*4)child run command2 with input from the buffer
+*/
+	if(strstr(first_cmd.c_str(), "&") != NULL){
+		cerr<<"pipe: invalid command"<<endl;//need to ask what to do in this case
+  	}
+
+	int my_pipe[2];
+	char buff[COMMAND_ARGS_MAX_LENGTH];
+	//questions::
+	//what size is the buffer?
+	//how do i make sure that the reader read only after the writed finished?(parent is reader and waiting?)
+	//for general knowledge, what happens if the reader read before the writer completely finished writing?
+	if(pipe(my_pipe) == -1){
+		perror("smash error: pipe failed");
+		return;
+	}
+	//fork etc...
+
+	
+}
+
+
 /*****************************************************************************************************************/
 //-------------------JobList IMPLEMENTATION----------------
 void JobsList::addJob(Command* cmd, bool isStopped)

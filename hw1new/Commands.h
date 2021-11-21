@@ -49,6 +49,9 @@ class ExternalCommand : public Command {
 
 class PipeCommand : public Command {
   // TODO: Add your data members
+  string full_str_cmd;
+  string first_cmd;
+  string second_cmd;
  public:
   PipeCommand(const char* cmd_line);
   virtual ~PipeCommand() {}
@@ -57,8 +60,12 @@ class PipeCommand : public Command {
 
 class RedirectionCommand : public Command {
  // TODO: Add your data members
+    string full_str_cmd;
+	string left_cmd;
+	string out_file;
+	int is_append;
  public:
-  explicit RedirectionCommand(const char* cmd_line) : Command(cmd_line) {}
+  explicit RedirectionCommand(const char* cmd_line);
   virtual ~RedirectionCommand() {}
   void execute() override;
   //void prepare() override;
