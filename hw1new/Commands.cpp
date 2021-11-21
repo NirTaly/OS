@@ -7,6 +7,7 @@
 #include <iomanip>
 #include <algorithm>
 #include "Commands.h"
+#include <fcntl.h>//redirection
 
 const std::string WHITESPACE = " \n\r\t\f\v";//from piazza
 
@@ -115,10 +116,13 @@ int SmallShell::getPid() const{
 * Creates and returns a pointer to Command class which matches the given command line (cmd_line)
 */
 Command* SmallShell::CreateCommand(const char* cmd_line) {
-	string cmd_s = _trim(string(cmd_line));
+  string cmd_s = _trim(string(cmd_line));
   string firstWord = cmd_s.substr(0, cmd_s.find_first_of(" \n"));
-
-  if (firstWord.compare("chprompt") == 0) {
+  last_cmd_not_found = false;
+  if(strstr(cmd_line, ">") != NULL) {//redirection command
+    return new RedirectionCommand(cmd_line);
+  }
+  else if (firstWord.compare("chprompt") == 0) {
     return new ChpromptCommand(cmd_line);
   }
   else if (firstWord.compare("showpid") == 0) {
@@ -245,6 +249,7 @@ void ExternalCommand::execute(){
 			char* const execv_argv[4] = {(char*)"/bin/bash",(char*)"-c",clean_cmd_copy,nullptr}; 
 			if(execv(execv_argv[0],execv_argv) == -1){
 				perror("smash error: exec failed");
+
             	return;
 			}
 		}
@@ -269,6 +274,65 @@ void ExternalCommand::execute(){
                 return;
             }
 		}
+		return;
+	}
+}
+
+void RedirectionCommand::execute(){
+	string str_cmd = cmd_line;
+	string left_cmd;
+	string out_file;
+	int is_append = 0;
+	const char* p = strstr(cmd_line, ">"); 
+	if(strstr(cmd_line, ">>") != NULL){
+		is_append = 1;
+	}
+	int i = 0;
+	while((cmd_line+i) != p){
+		i++;
+	}
+	if(i != 0){
+		left_cmd = str_cmd.substr(0,i);
+	}
+	out_file = str_cmd.substr(i+1+is_append,str_cmd.size()-1-i-is_append);
+	left_cmd = _trim(left_cmd);
+	out_file = _trim(out_file);
+	//now we want to close stdout, change it to point to the file that the output has to go to,
+	//create and execute the given command. but we want the restore fdt(1) to point to the screen
+	//at the end of the process so we have to duplicate it.
+	int fdt_screen_ptr = dup(1);
+	if(fdt_screen_ptr == -1){
+		perror("smash error: dup failed");
+		return;
+	}
+	int fd;
+	if(is_append == 0){
+		fd = open(out_file.c_str(),(O_WRONLY| O_CREAT),0666); 
+	}
+	else{
+		fd = open(out_file.c_str(),(O_WRONLY| O_CREAT | O_APPEND),0666);
+	}
+	if(fd == -1){
+		perror("smash error: open failed");
+		return;
+	}
+
+	if(dup2(fd,1)  == -1){//set fdt[1] to point to the opened file
+		perror("smash error: dup2 failed");
+		return;
+	}
+	SmallShell& smash = SmallShell::getInstance();
+	smash.CreateCommand(left_cmd.c_str())->execute();
+	//note: command may fail and still a file will be creaeted, but it's the same in bash
+	
+	//reset stdout to point to the screen obj file
+	if(dup2(fdt_screen_ptr,1)  == -1){
+		perror("smash error: dup2 failed");
+		return;
+	}
+
+	if(close(fd) == -1){
+		perror("smash error: dup2 failed");
 		return;
 	}
 }
