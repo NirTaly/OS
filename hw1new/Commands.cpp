@@ -659,6 +659,7 @@ void ForegroundCommand::execute()
     else if (args_size == 1) 
     {
       JobsList::JobEntry& job = jlist->getLastJob();
+      jobID = job.getUID();
       pid = job.getPID();
       cmd_line = job.getCmd();
     }
@@ -667,7 +668,7 @@ void ForegroundCommand::execute()
       invalid_argument("invalid arguments");
     }
     
-    std::cout << cmd_line << " : " << pid << " " << jobID << std::endl;
+    std::cout << cmd_line << " : " << pid << " " << std::endl;
     jlist->removeJobById(jobID);
 
     /* int retval =  */kill(pid,SIGCONT);
@@ -676,6 +677,11 @@ void ForegroundCommand::execute()
   }
   catch(const std::exception& e)
   {
-    std::cerr << e.what() << '\n';
+    throw runtime_error(std::string("fg: ") + std::string(e.what()));
   }
+}
+
+void BackgroundCommand::execute()
+{
+
 }
