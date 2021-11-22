@@ -203,7 +203,7 @@ RedirectionCommand::RedirectionCommand(const char* cmd_line) : Command(cmd_line)
 	out_file = _trim(out_file);
 }
 
-PipeCommand::PipeCommand(const char* cmd_line) : Command(cmd_line){
+PipeCommand::PipeCommand(const char* cmd_line) : Command(cmd_line) , is_stderr_pipe(false){
 	full_str_cmd = cmd_line;
 	const char* p = strstr(cmd_line, "|"); 
 	unsigned int i = 0;
@@ -215,12 +215,12 @@ PipeCommand::PipeCommand(const char* cmd_line) : Command(cmd_line){
 	}
 	//ignore &
 	if(i+1 < full_str_cmd.size() && full_str_cmd[i+1] == '&'){
+		is_stderr_pipe = true;
 		second_cmd = full_str_cmd.substr(i+2,full_str_cmd.size()-2-i);
 	}
 	else{
 		second_cmd = full_str_cmd.substr(i+1,full_str_cmd.size()-1-i);
 	}
-
 	first_cmd = _trim(first_cmd);
 	second_cmd = _trim(second_cmd);
 }
@@ -301,7 +301,6 @@ void ExternalCommand::execute(){
 			char* const execv_argv[4] = {(char*)"/bin/bash",(char*)"-c",clean_cmd_copy,nullptr}; 
 			if(execv(execv_argv[0],execv_argv) == -1){
 				perror("smash error: exec failed");
-
             	return;
 			}
 		}
@@ -388,7 +387,7 @@ void RedirectionCommand::execute(){
 	}
 	SmallShell& smash = SmallShell::getInstance();
 	smash.executeCommand(left_cmd.c_str());
-	// smash.CreateCommand(left_cmd.c_str())->execute();
+	//smash.CreateCommand(left_cmd.c_str())->execute();
 	//note: command may fail and still a file will be created, but it's the same in bash
 	
 	//reset stdout to point to the screen obj file
@@ -420,24 +419,83 @@ void PipeCommand::execute(){
 		cerr<<"pipe: invalid command"<<endl;//need to ask what to do in this case
   	}
 
-	int my_pipe[2];
-	char buff[COMMAND_ARGS_MAX_LENGTH];
-	//questions::
-	//what size is the buffer?
+	//questions:
 	//how do i make sure that the reader read only after the writed finished?(parent is reader and waiting?)
 	//for general knowledge, what happens if the reader read before the writer completely finished writing?
+	int fd_stdin_save = dup(0);
+	int fd_stdout_save = dup(1);
+	int my_pipe[2];//0 for reading, 1 for writing from the pipe
 	if(pipe(my_pipe) == -1){
 		perror("smash error: pipe failed");
 		return;
 	}
-	//fork etc...
+	int pid = fork();
+	if(pid < 0){
+		perror("smash error: fork failed");
+		return;
+	}
+	else if(pid == 0){//son(write)
+		if(setpgrp() == -1){
+			perror("smash error: setpgrp failed");
+            return;
+		}
+		if(dup2(my_pipe[1],is_stderr_pipe ? 2 : 1) == -1){
+			perror("smash error: dup2 failed");
+            return;
+		}
+		if((close(my_pipe[0]) == -1) || (close(my_pipe[1]) == -1)){
+			perror("smash error: close failed");
+            return;	
+		}
+		SmallShell& smash = SmallShell::getInstance();
+		smash.executeCommand(first_cmd.c_str());
+		// return;
+	}
+	else{//parent(read)
+		if(dup2(my_pipe[0],0) == -1){
+			perror("smash error: dup2 failed");
+            return;
+		}
+		if((close(my_pipe[0]) == -1) || (close(my_pipe[1]) == -1)){
+			perror("smash error: close failed");
+            return;	
+		}
+		if(waitpid(pid,nullptr,WUNTRACED) == -1){
+			perror("smash error: close failed");
+            return;
+		}
+		else{
+			SmallShell& smash = SmallShell::getInstance();
+			smash.executeCommand(second_cmd.c_str());
+		}
 
-	
+	}
+	//now we want to restore parent's(smash) fdt
+
+	if(dup2(fd_stdin_save,0) == -1){
+		perror("smash error: dup2 failed");
+		return;
+	}
+
+	if(dup2(fd_stdout_save,1) == -1){
+		perror("smash error: dup2 failed");
+		return;
+	}
+
+	if(close(fd_stdin_save) == -1){
+		perror("smash error: close failed");
+		return;
+	}
+
+	if(close(fd_stdout_save) == -1){
+		perror("smash error: close failed");
+		return;
+	}
 }
 
 
 /*****************************************************************************************************************/
-//-------------------JobList IMPLEMENTATION----------------
+//------------------JobList IMPLEMENTATION----------------
 void JobsList::addJob(Command* cmd, bool isStopped)
 {
   string cmd_line(cmd->getCmd());

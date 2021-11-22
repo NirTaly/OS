@@ -52,6 +52,7 @@ class PipeCommand : public Command {
   string full_str_cmd;
   string first_cmd;
   string second_cmd;
+  bool is_stderr_pipe;
  public:
   PipeCommand(const char* cmd_line);
   virtual ~PipeCommand() {}
