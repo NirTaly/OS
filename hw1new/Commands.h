@@ -183,7 +183,15 @@ enum JobState {RUNNING, STOP};
 
 class JobsList {
 public:
-  class Empty : public std::exception{  };
+  class Empty : public std::exception
+  {
+  public:
+    Empty(std::string what): str(what) {}
+    virtual const char* what() const throw() {return str.c_str(); }
+  private:
+    std::string str;
+  };
+
   class NotFound : public std::exception
   {
   public:

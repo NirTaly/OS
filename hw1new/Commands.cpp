@@ -565,7 +565,7 @@ JobsList::JobEntry& JobsList::getLastJob()
 {
   if (jobs.empty())
   {
-    throw Empty();
+    throw Empty("jobs list is empty");
   }
 
   return jobs.back();
@@ -581,7 +581,7 @@ JobsList::JobEntry& JobsList::getLastStoppedJob()
   }
   else if (jobs.empty())
   {
-    throw Empty();
+    throw Empty("jobs list is empty");
   }
 
   return *it;
@@ -665,7 +665,7 @@ void ForegroundCommand::execute()
     }
     else
     {
-      invalid_argument("invalid arguments");
+      throw invalid_argument("invalid arguments");
     }
     
     std::cout << cmd_line << " : " << pid << " " << std::endl;
