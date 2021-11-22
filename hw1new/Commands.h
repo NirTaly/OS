@@ -95,11 +95,12 @@ class ShowPidCommand : public BuiltInCommand {
   void execute() override;
 };
 
+
 class JobsList;
 
 class QuitCommand : public BuiltInCommand {
-// TODO: Add your data members public:
-  QuitCommand(const char* cmd_line, JobsList* jobs);
+public:
+  QuitCommand(const char* cmd_line) : BuiltInCommand(cmd_line){}
   virtual ~QuitCommand() {}
   void execute() override;
 };
@@ -170,12 +171,16 @@ public:
   pid_t getPid() const;
   JobsList* getJobList();
   char** getPrevDir();
+  void quit();
+  bool isAlive();
+
 private:
   std::string prompt;
   pid_t pid;
   JobsList* job_list;
   char* prev_dir;
-  
+  bool is_alive;
+
   SmallShell();
 };
 
@@ -204,7 +209,7 @@ public:
 
   class JobEntry {
   public:
-    JobEntry(string cmd,size_t id, pid_t pid) : uid(id), pid(pid),start_time(time(NULL)), cmd_line(cmd), state(RUNNING) {}
+    JobEntry(string cmd,size_t id, pid_t pid, JobState state = RUNNING) : uid(id), pid(pid),start_time(time(NULL)), cmd_line(cmd), state(state) {}
     ~JobEntry() = default;
     time_t getStartTime() const { return start_time; }
     string getCmd() const { return cmd_line; }

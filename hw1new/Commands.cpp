@@ -91,7 +91,7 @@ Command::~Command(){
 /*****************************************************************************************************************/
 //-------------------SMASH IMPLEMENTATION----------------
 
-SmallShell::SmallShell() : prompt("smash"), pid(getpid()), job_list(new JobsList()), prev_dir(new char[PATH_MAX]) {
+SmallShell::SmallShell() : prompt("smash"), pid(getpid()), job_list(new JobsList()), prev_dir(new char[PATH_MAX]), is_alive(true) {
   strcpy(prev_dir,"");
 }
 
@@ -111,6 +111,9 @@ const std::string& SmallShell::getPrompt() const{
 int SmallShell::getPid() const{
   return pid;
 };
+
+void SmallShell::quit() { is_alive = false; }
+bool SmallShell::isAlive() { return is_alive; }
 
 /**
 * Creates and returns a pointer to Command class which matches the given command line (cmd_line)
@@ -145,6 +148,12 @@ Command* SmallShell::CreateCommand(const char* cmd_line) {
   }
   else if (firstWord.compare("fg") == 0) {
     return new ForegroundCommand(cmd_line);
+  }
+  // else if (firstWord.compare("bg") == 0) {
+  //   return new BackgroundCommand(cmd_line);
+  // }
+  else if (firstWord.compare("quit") == 0) {
+    return new QuitCommand(cmd_line);
   }
   else {
     return new ExternalCommand(cmd_line);
@@ -503,8 +512,9 @@ void JobsList::addJob(Command* cmd, bool isStopped)
 {
   string cmd_line(cmd->getCmd());
   int job_pid = cmd->getPID();
+  JobState state = isStopped ? JobState::STOP : JobState::RUNNING;
 
-  jobs.push_back(JobEntry(cmd_line, job_i++, job_pid));
+  jobs.push_back(JobEntry(cmd_line, job_i++, job_pid,state));
 }
 
 void JobsList::printJobsList()
@@ -523,8 +533,10 @@ void JobsList::printJobsList()
 
 void JobsList::killAllJobs()
 {
+  std::cout << "smash: sending SIGKILL signal to " << jobs.size() << " jobs:" << std::endl;
   for (const JobEntry& job : jobs)
   {
+    std::cout << job.getPID() << ": " << job.getCmd() << std::endl;
     kill(job.getPID(), SIGKILL);
   }
 }
@@ -681,7 +693,63 @@ void ForegroundCommand::execute()
   }
 }
 
+
 void BackgroundCommand::execute()
 {
+  // try
+  // {
+  //   size_t jobID = 0;
+  //   pid_t pid;
+  //   JobsList* jlist = SmallShell::getInstance().getJobList();
+  //   std::string cmd_line;
 
+  //   if (args_size == 2)
+  //   {
+  //     try{
+  //       jobID = std::stoull(std::string(args[1]));
+  //     }catch(const std::exception&)    {
+  //       throw invalid_argument("invalid arguments");
+  //     }
+
+  //     JobsList::JobEntry& job = jlist->getJobById(jobID);
+  //     pid = job.getPID();
+  //     cmd_line = job.getCmd();
+  //   }
+  //   else if (args_size == 1) 
+  //   {
+  //     JobsList::JobEntry& job = jlist->getLastStoppedJob();
+  //     jobID = job.getUID();
+  //     pid = job.getPID();
+  //     cmd_line = job.getCmd();
+  //   }
+  //   else
+  //   {
+  //     throw invalid_argument("invalid arguments");
+  //   }
+    
+  //   std::cout << cmd_line << " : " << pid << " " << std::endl;
+  //   jlist->removeJobById(jobID);
+
+  //   /* int retval =  */kill(pid,SIGCONT);
+  
+  //  SOMEHOW EXECUTE BACKGROUND COMMAND
+
+  // }
+  // catch(const std::exception& e)
+  // {
+  //   throw runtime_error(std::string("bg: ") + std::string(e.what()));
+  // }
+}
+
+void QuitCommand::execute()
+{
+    SmallShell& smash = SmallShell::getInstance();
+    JobsList* jlist = smash.getJobList();
+
+    if (args_size >= 2 && std::string(args[1]) == "kill")
+    {
+      jlist->killAllJobs();
+    }
+
+    smash.quit();
 }
