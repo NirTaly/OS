@@ -530,17 +530,14 @@ void JobsList::removeFinishedJobs()
 {//not so sure what is happening here
  //we iterate over the list and delete each job that hold the condition (waitpid(jobid,nullptr,WNOHANG) == jobid)
  //since waitpid(jobid,nullptr,WNOHANG) return jobid if it exited already or 0 if it didnt
-//  vector<JobEntry> new_jobs;
-//  for(unsigned int i = 0; i < jobs.size(); i++){
-// 	 if(waitpid(jobs[i].getUID(), nullptr,WNOHANG)  ){
-//         new_jobs.push_back(jobs[i]);
-//     }
-//  }
-//  jobs = new_jobs;
-	// std::remove_if(jobs.begin(), jobs.end(), [](JobEntry& job) { return job.getUID() == waitpid(job.getUID(),nullptr,WNOHANG); });
-  std::remove_if(jobs.begin(), jobs.end(), [](JobEntry& job) { return job.getState() == JobState::DONE; });
-
-
+  for(unsigned int i = 0; i < jobs.size(); i++)
+  { 
+    pid_t retval = waitpid(jobs[i].getPID(), nullptr, WNOHANG);
+    if( retval != 0 && retval != -1 )
+    {
+      jobs.erase(jobs.begin() + i);
+    }
+  }
 }
 
 JobsList::JobEntry& JobsList::getJobById(size_t jobId)
@@ -556,7 +553,9 @@ JobsList::JobEntry& JobsList::getJobById(size_t jobId)
 
 void JobsList::removeJobById(size_t jobId)
 {
-  std::remove_if(jobs.begin(), jobs.end(), [jobId](JobEntry& job) { return job.getUID() == jobId; });
+  for (size_t i = 0; i < jobs.size(); i++)
+    if (jobs[i].getUID() == jobId)
+      jobs.erase(jobs.begin() + i);
 }
 
 JobsList::JobEntry& JobsList::getLastJob()
@@ -618,9 +617,14 @@ void KillCommand::execute()
     JobsList* jlist = SmallShell::getInstance().getJobList();
   
     JobsList::JobEntry& job = jlist->getJobById(jobID);
+    int job_pid = job.getPID();
     int retval = kill(job.getPID(),-signum);
-    if (retval == EINVAL || retval == EPERM || retval == ESRCH || retval <= 0 || signum < -32 || signum >= 0)
+    jlist->removeJobById(jobID);
+
+    if (retval == EINVAL || retval == EPERM || retval == ESRCH || retval < 0 || signum < -32 || signum >= 0)
       perror("smash error: kill failed");
+    
+    std::cout << "signal number " << -signum << " was sent to pid " << job_pid << std::endl;
   }
   catch(const std::exception& e)
   {
