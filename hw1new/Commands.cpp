@@ -143,6 +143,9 @@ Command* SmallShell::CreateCommand(const char* cmd_line) {
   else if (firstWord.compare("kill") == 0) {
     return new KillCommand(cmd_line);
   }
+  else if (firstWord.compare("fg") == 0) {
+    return new ForegroundCommand(cmd_line);
+  }
   else {
     return new ExternalCommand(cmd_line);
   }
@@ -637,7 +640,7 @@ void ForegroundCommand::execute()
   try
   {
     size_t jobID = 0;
-    int pid;
+    pid_t pid;
     JobsList* jlist = SmallShell::getInstance().getJobList();
     std::string cmd_line;
 
@@ -667,6 +670,8 @@ void ForegroundCommand::execute()
     std::cout << cmd_line << " : " << pid << " " << jobID << std::endl;
     jlist->removeJobById(jobID);
 
+    /* int retval =  */kill(pid,SIGCONT);
+    /* pid_t ret_waitpid = */ waitpid(pid, nullptr, WCONTINUED);
 
   }
   catch(const std::exception& e)

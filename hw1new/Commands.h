@@ -19,7 +19,7 @@ protected:
   const char* cmd_line;
   char* args[COMMAND_MAX_ARGS];
   int args_size;
-  int pid;
+  pid_t pid;
 public:
   Command(const char* cmd_line);
   virtual ~Command();
@@ -167,19 +167,19 @@ public:
   // TODO: add extra methods as needed
   void setPrompt(std::string new_prompt);
   const std::string& getPrompt() const;
-  int getPid() const;
+  pid_t getPid() const;
   JobsList* getJobList();
   char** getPrevDir();
 private:
   std::string prompt;
-  int pid;
+  pid_t pid;
   JobsList* job_list;
   char* prev_dir;
   
   SmallShell();
 };
 
-enum JobState {RUNNING, STOP, DONE};
+enum JobState {RUNNING, STOP};
 
 class JobsList {
 public:
@@ -196,16 +196,16 @@ public:
 
   class JobEntry {
   public:
-    JobEntry(string cmd,size_t id, int pid) : uid(id), pid(pid),start_time(time(NULL)), cmd_line(cmd), state(RUNNING) {}
+    JobEntry(string cmd,size_t id, pid_t pid) : uid(id), pid(pid),start_time(time(NULL)), cmd_line(cmd), state(RUNNING) {}
     ~JobEntry() = default;
     time_t getStartTime() const { return start_time; }
     string getCmd() const { return cmd_line; }
     size_t getUID() const { return uid; }
     JobState getState() const { return state; }
-    int getPID() const { return /* pid==0 ? SmallShell::getInstance().getPid() : */ pid; }
+    pid_t getPID() const { return /* pid==0 ? SmallShell::getInstance().getPid() : */ pid; }
   private:
     size_t uid;
-    int pid;
+    pid_t pid;
     time_t start_time;
     string cmd_line;
     JobState state;
