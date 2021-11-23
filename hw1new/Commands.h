@@ -152,6 +152,27 @@ class HeadCommand : public BuiltInCommand {
 
 class JobsList;
 
+enum JobState {RUNNING, STOP};
+class JobEntry {
+public:
+  JobEntry();
+  JobEntry(string cmd,size_t id, pid_t pid, JobState state = RUNNING) : uid(id), pid(pid),start_time(time(NULL)), cmd_line(cmd), state(state) {}
+  ~JobEntry() = default;
+  time_t getStartTime() const { return start_time; }
+  string getCmd() const { return cmd_line; }
+  void setCmd(std::string new_cmd) { cmd_line = new_cmd; }
+  size_t getUID() const { return uid; }
+  JobState getState() const { return state; }
+  pid_t getPID() const { return pid; }
+private:
+  size_t uid;
+  pid_t pid;
+  time_t start_time;
+  string cmd_line;
+  JobState state;
+};
+
+
 class SmallShell {
 public:
   Command* CreateCommand(const char* cmd_line);
@@ -168,7 +189,9 @@ public:
   // TODO: add extra methods as needed
   void setPrompt(std::string new_prompt);
   const std::string& getPrompt() const;
-  pid_t getPid() const;
+  pid_t getSmashPid() const;
+  JobEntry getFGJob() const;
+  void setFGJob(JobEntry );
   JobsList* getJobList();
   char** getPrevDir();
   void quit();
@@ -180,11 +203,11 @@ private:
   JobsList* job_list;
   char* prev_dir;
   bool is_alive;
+  JobEntry fg_job;
 
   SmallShell();
 };
 
-enum JobState {RUNNING, STOP};
 
 class JobsList {
 public:
@@ -205,24 +228,6 @@ public:
   private:
     std::string str;
   };
-  
-
-  class JobEntry {
-  public:
-    JobEntry(string cmd,size_t id, pid_t pid, JobState state = RUNNING) : uid(id), pid(pid),start_time(time(NULL)), cmd_line(cmd), state(state) {}
-    ~JobEntry() = default;
-    time_t getStartTime() const { return start_time; }
-    string getCmd() const { return cmd_line; }
-    size_t getUID() const { return uid; }
-    JobState getState() const { return state; }
-    pid_t getPID() const { return /* pid==0 ? SmallShell::getInstance().getPid() : */ pid; }
-  private:
-    size_t uid;
-    pid_t pid;
-    time_t start_time;
-    string cmd_line;
-    JobState state;
-  };
 
   JobsList() : job_i(1) { }
   ~JobsList() = default;
@@ -234,7 +239,7 @@ public:
   void removeJobById(size_t jobId);
   JobEntry& getLastJob();
   JobEntry& getLastStoppedJob();
-
+  size_t getLastJobIndex() const { return job_i-1; }
 private:
   vector<JobEntry> jobs;
   size_t job_i;
