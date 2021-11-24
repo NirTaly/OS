@@ -579,7 +579,10 @@ void JobsList::removeJobById(size_t jobId)
 {
   for (size_t i = 0; i < jobs.size(); i++)
     if (jobs[i].getUID() == jobId)
+    {
       jobs.erase(jobs.begin() + i);
+      i--;  // because erase invalidate iterator of vector
+    }
 }
 
 JobEntry& JobsList::getLastJob()
