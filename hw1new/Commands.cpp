@@ -577,12 +577,16 @@ JobEntry& JobsList::getJobById(size_t jobId)
 
 void JobsList::removeJobById(size_t jobId)
 {
-  for (size_t i = 0; i < jobs.size(); i++)
-    if (jobs[i].getUID() == jobId)
-    {
-      jobs.erase(jobs.begin() + i);
-      i--;  // because erase invalidate iterator of vector
-    }
+  auto end = std::remove_if(jobs.begin(), jobs.end(), [jobId](JobEntry& job){return job.getUID() == jobId;});
+
+  jobs.erase(end,jobs.end()); // Erase-remove idiom
+
+  // for (size_t i = 0; i < jobs.size(); i++)
+  //   if (jobs[i].getUID() == jobId)
+  //   {
+  //     jobs.erase(jobs.begin() + i);
+  //     i--;  // because erase invalidate iterator of vector
+  //   }
 }
 
 JobEntry& JobsList::getLastJob()
