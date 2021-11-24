@@ -5,10 +5,12 @@
 #include <time.h>
 #include <string>
 #include <exception>
+#include <limits.h> //PATH_MAX
+
 
 #define COMMAND_ARGS_MAX_LENGTH (200)
 #define COMMAND_MAX_ARGS (20)
-#define PATH_MAX (200)
+// #define PATH_MAX (200)
 
 using std::string;
 using std::vector;
@@ -190,8 +192,8 @@ public:
   void setPrompt(std::string new_prompt);
   const std::string& getPrompt() const;
   pid_t getSmashPid() const;
-  JobEntry getFGJob() const;
-  void setFGJob(JobEntry );
+  Command* getFGJob() const;
+  void setFGJob(Command* );
   JobsList* getJobList();
   char** getPrevDir();
   void quit();
@@ -203,7 +205,7 @@ private:
   JobsList* job_list;
   char* prev_dir;
   bool is_alive;
-  JobEntry fg_job;
+  Command* fg_job;
 
   SmallShell();
 };

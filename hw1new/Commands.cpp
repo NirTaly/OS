@@ -92,7 +92,7 @@ Command::~Command(){
 //-------------------SMASH IMPLEMENTATION----------------
 
 SmallShell::SmallShell() : prompt("smash"), pid(getpid()), job_list(new JobsList()), 
-                      prev_dir(new char[PATH_MAX]), is_alive(true)
+                      prev_dir(new char[PATH_MAX]), is_alive(true), fg_job(nullptr)
 {
   strcpy(prev_dir,"");
 }
@@ -108,9 +108,9 @@ const std::string& SmallShell::getPrompt() const {  return prompt; }
 
 int SmallShell::getSmashPid() const {  return pid; }
 
-JobEntry SmallShell::getFGJob() const { return fg_job; }
+Command* SmallShell::getFGJob() const { return fg_job; }
 
-void SmallShell::setFGJob(JobEntry job) {  fg_job = job; }
+void SmallShell::setFGJob(Command* job) {  fg_job = job; }
 
 void SmallShell::quit() { is_alive = false; }
 
@@ -167,7 +167,13 @@ void SmallShell::executeCommand(const char* cmd_line) {
   try
   {
     job_list->removeFinishedJobs();
+
+    if (!_isBackgroundComamnd(cmd_line))
+      setFGJob(cmd);
+
     cmd->execute();
+
+    setFGJob(nullptr);
   }
   catch(const std::exception& e)  
   { 
@@ -333,13 +339,13 @@ void ExternalCommand::execute(){
 			this->pid = tmp_pid;//restore shell pid
 		}
 		else{//parent(shell) need to wait
+      this->pid = pid;  // enable us to use signal handler ctrl-C
 			int status;
 			if(waitpid(pid,&status,WUNTRACED) == -1 ){//WUNTRACED make father stop waiting when the son was stopped
                 perror("smash error: waitpid failed");
                 return;
             }
 		}
-		return;
 	}
 }
 

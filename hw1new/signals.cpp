@@ -24,24 +24,25 @@ using namespace std;
 //   }
   
 // }
+#define PRINT_DEBUG(X) {std::cout << X << std::endl;}
 
 void ctrlCHandler(int sig_num) {
   std::cout << "smash: got ctrl-C" << std::endl;
 
   SmallShell& smash = SmallShell::getInstance();
-  pid_t smash_pid = smash.getSmashPid(), fg_pid = smash.getFGJob().getPID();
+  Command* fg_cmd = smash.getFGJob();
 
-  if (smash_pid != fg_pid)
+  pid_t smash_pid = smash.getSmashPid();
+
+  if (fg_cmd/* smash_pid != fg_pid */)
   {
-    if (kill(fg_pid, SIGKILL) == -1)
+    if (kill(fg_cmd->getPID(), SIGKILL) == -1)
       perror("smash error: kill failed");
     
     if (kill(smash_pid, SIGCONT) == -1)
       perror("smash error: kill failed");
       
-    smash.setFGJob(JobEntry());
-
-    std::cout << "smash: process " << fg_pid << " was killed" << std::endl;
+    std::cout << "smash: process " << fg_cmd->getPID() << " was killed" << std::endl;
   }
 }
 
