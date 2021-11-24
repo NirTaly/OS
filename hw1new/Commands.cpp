@@ -555,6 +555,7 @@ void JobsList::removeFinishedJobs()
     if( retval != 0 && retval != -1 )
     {
       jobs.erase(jobs.begin() + i);
+      i--;  // because erase invalidate iterator of vector
     }
     else if (retval == -1)
     {
