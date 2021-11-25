@@ -17,9 +17,6 @@ void ctrlZHandler(int sig_num) {
     if (kill(fg_job.getPID(), SIGTSTP) == -1)
       perror("smash error: kill failed");
     
-    // if (kill(smash.getSmashPid(), SIGCONT) == -1)
-    //   perror("smash error: kill failed");
-
     smash.getJobList()->addJob(fg_job.getCmd(),fg_job.getPID(),fg_job.getStartTime(),STOP);
     smash.setFGJob(JobEntry());
 

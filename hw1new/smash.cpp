@@ -27,7 +27,7 @@ int main(int argc, char* argv[]) {
         } catch(const std::exception& e)
         {
             std::cerr << "smash error: " << e.what() << '\n';
-        }
+        } 
     }
 
     return 0;
@@ -39,7 +39,4 @@ int main(int argc, char* argv[]) {
  * %bug job-id not kept when backgroundCommand->fg->ctrlZ
  * 
  * %bug pipe
- * 
- * %work: bg, fg, ctrlZ, ctrlC - regular cases
- * %work: bg after ctrlZ
  */

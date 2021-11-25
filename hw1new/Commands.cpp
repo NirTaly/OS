@@ -748,9 +748,15 @@ void ForegroundCommand::execute()
     if (kill(jobPID,SIGCONT) == -1)
       perror("smash error: kill failed");
 
-    if (waitpid(jobPID, nullptr, WCONTINUED|WUNTRACED) == -1)
+    int status;
+    int retval = waitpid(jobPID, &status, WUNTRACED);
+    if (retval == -1)
       perror("smash error: waitpid failed");
 
+    if (WIFSTOPPED(status))
+    {
+      smash.setFGJob(JobEntry());
+    }
   }
   catch(const std::exception& e)
   {
@@ -762,9 +768,6 @@ void BackgroundCommand::execute()
 {
   try
   {
-    // SmallShell& smash = SmallShell::getInstance();
-    // JobsList* jlist = smash.getJobList();
-
     JobEntry& job = jobToExec(args_size, args, JobType::BG);
     
     if (job.getState() == JobState::RUNNING)
@@ -775,12 +778,10 @@ void BackgroundCommand::execute()
     std::string old_cmd = job.getCmd();
     std::cout << old_cmd << " : " << job.getPID() << " " << std::endl;
     
-    // jlist->getJobById(job.getUID()).setState(JobState::RUNNING);
-
     if (kill(job.getPID(),SIGCONT) == -1)
       perror("smash error: kill failed");
 
-    char clean_cmd_copy[COMMAND_ARGS_MAX_LENGTH];//just because passing cmd_line to helper functions doesnt work
+    char clean_cmd_copy[COMMAND_ARGS_MAX_LENGTH];
 	  strcpy(clean_cmd_copy,old_cmd.c_str());
     _removeBackgroundSign(clean_cmd_copy);
 
