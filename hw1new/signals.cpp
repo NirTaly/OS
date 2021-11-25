@@ -6,24 +6,24 @@
 
 using namespace std;
 
-// void ctrlZHandler(int sig_num) {
-// 	std::cout << "smash: got ctrl-Z" << std::endl;
+void ctrlZHandler(int sig_num) {
+	std::cout << "smash: got ctrl-Z" << std::endl;
 
-//   SmallShell& smash = SmallShell::getInstance();
-//   pid_t smash_pid = smash.getSmashPid(), fg_pid = smash.getFGJob().getPID();
+  SmallShell& smash = SmallShell::getInstance();
+  Command* fg_cmd = smash.getFGJob();
 
-//   if (smash_pid != fg_pid)
-//   {
-//     if (kill(fg_pid, SIGSTOP) == -1)
-//       perror("smash error: kill failed");
+  if (fg_cmd)
+  {
+    if (kill(fg_cmd->getPID(), SIGSTOP) == -1)
+      perror("smash error: kill failed");
     
-//     smash.getJobList()->addJob(smash.getFGJob().getCmd())
-//     smash.setFGPid(smash_pid);
+    smash.getJobList()->addJob(fg_cmd,STOP);
+    smash.setFGJob(nullptr);
 
-//     std::cout << "smash: process " << fg_pid << " was killed" << std::endl;
-//   }
+    std::cout << "smash: process " << fg_cmd->getPID() << " was stopped" << std::endl;
+  }
   
-// }
+}
 #define PRINT_DEBUG(X) {std::cout << X << std::endl;}
 
 void ctrlCHandler(int sig_num) {
@@ -34,7 +34,7 @@ void ctrlCHandler(int sig_num) {
 
   pid_t smash_pid = smash.getSmashPid();
 
-  if (fg_cmd/* smash_pid != fg_pid */)
+  if (fg_cmd)
   {
     if (kill(fg_cmd->getPID(), SIGKILL) == -1)
       perror("smash error: kill failed");

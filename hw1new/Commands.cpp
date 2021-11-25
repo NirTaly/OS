@@ -166,11 +166,10 @@ void SmallShell::executeCommand(const char* cmd_line) {
   Command* cmd = CreateCommand(cmd_line);
   try
   {
-    job_list->removeFinishedJobs();
-
     if (!_isBackgroundComamnd(cmd_line))
       setFGJob(cmd);
 
+    job_list->removeFinishedJobs();
     cmd->execute();
 
     setFGJob(nullptr);
@@ -656,8 +655,7 @@ void KillCommand::execute()
     JobEntry& job = jlist->getJobById(jobID);
     int job_pid = job.getPID();
     
-    
-    int retval = kill(job.getPID(),signum);
+    int retval = kill(job_pid,signum);
     if (retval == -1 || signum > 32 || signum <= 0)
     {
       perror("smash error: kill failed");
@@ -667,9 +665,10 @@ void KillCommand::execute()
 
     std::cout << "signal number " << -signum << " was sent to pid " << job_pid << std::endl;
     
-    if (signum == SIGSTOP)
+    if (signum == SIGTSTP)
     {
       // should we handle it?
+      job.setState(JobState::STOP);
     }
     else
     {
@@ -733,10 +732,11 @@ void ForegroundCommand::execute()
     std::cout << job.getCmd() << " : " << job.getPID() << " " << std::endl;
     jlist->removeJobById(job.getUID());
 
+    SmallShell::getInstance().setFGJob(this);
+
     if (kill(job.getPID(),SIGCONT) == -1)
       perror("smash error: kill failed");
 
-    
     if (waitpid(job.getPID(), nullptr, WCONTINUED) == -1)
       perror("smash error: waitpid failed");
 
