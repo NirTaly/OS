@@ -516,14 +516,20 @@ void PipeCommand::execute(){
 /*****************************************************************************************************************/
 //------------------JobList IMPLEMENTATION----------------
 
-void JobsList::addJob(string cmd_line, pid_t pid, time_t start_time, bool isStopped)
+void JobsList::addJob(string cmd_line, pid_t pid, time_t start_time, bool isStopped, size_t jobID)
 {
   JobState state = isStopped ? JobState::STOP : JobState::RUNNING;
 
   if (jobs.empty())
     job_i = 1;
 
-  jobs.push_back(JobEntry(cmd_line, job_i++, pid, start_time, state));
+  if (jobID)
+  {
+    jobs.push_back(JobEntry(cmd_line, jobID, pid, start_time, state));
+    std::sort(jobs.begin(),jobs.end(),[](const JobEntry& a, const JobEntry& b) -> bool { return a.getUID() < b.getUID(); });
+  }
+  else
+    jobs.push_back(JobEntry(cmd_line, job_i++, pid, start_time, state));
 }
 void JobsList::addJob(Command* cmd, bool isStopped)
 {

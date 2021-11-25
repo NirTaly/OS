@@ -238,7 +238,7 @@ public:
   JobsList() : job_i(1) { }
   ~JobsList() = default;
   void addJob(Command* cmd, bool isStopped = false);
-  void addJob(string cmd_line, pid_t pid, time_t start_time = time(NULL), bool isStopped = false);
+  void addJob(string cmd_line, pid_t pid, time_t start_time = time(NULL), bool isStopped = false, size_t jobID = 0);
   void printJobsList();
   void killAllJobs();
   void removeFinishedJobs();

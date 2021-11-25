@@ -17,7 +17,7 @@ void ctrlZHandler(int sig_num) {
     if (kill(fg_job.getPID(), SIGTSTP) == -1)
       perror("smash error: kill failed");
     
-    smash.getJobList()->addJob(fg_job.getCmd(),fg_job.getPID(),fg_job.getStartTime(),STOP);
+    smash.getJobList()->addJob(fg_job.getCmd(),fg_job.getPID(),fg_job.getStartTime(),STOP,fg_job.getUID());
     smash.setFGJob(JobEntry());
 
     std::cout << "smash: process " << fg_job.getPID() << " was stopped" << std::endl;

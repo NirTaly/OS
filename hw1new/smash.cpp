@@ -35,8 +35,6 @@ int main(int argc, char* argv[]) {
 
 
 /***    BUGS:
- * %bug fg after ctrlZ
- * %bug job-id not kept when backgroundCommand->fg->ctrlZ
- * 
+ * %bug sometimes make test failes -> where should put removeAllJobs
  * %bug pipe
  */
