@@ -92,7 +92,7 @@ Command::~Command(){
 //-------------------SMASH IMPLEMENTATION----------------
 
 SmallShell::SmallShell() : prompt("smash"), pid(getpid()), job_list(new JobsList()), 
-                      prev_dir(new char[PATH_MAX]), is_alive(true), fg_job(nullptr)
+                      prev_dir(new char[PATH_MAX]), is_alive(true), fg_job()
 {
   strcpy(prev_dir,"");
 }
@@ -108,9 +108,9 @@ const std::string& SmallShell::getPrompt() const {  return prompt; }
 
 int SmallShell::getSmashPid() const {  return pid; }
 
-Command* SmallShell::getFGJob() const { return fg_job; }
+JobEntry SmallShell::getFGJob() const { return fg_job; }
 
-void SmallShell::setFGJob(Command* job) {  fg_job = job; }
+void SmallShell::setFGJob(JobEntry job) {  fg_job = job; }
 
 void SmallShell::quit() { is_alive = false; }
 
@@ -166,13 +166,10 @@ void SmallShell::executeCommand(const char* cmd_line) {
   Command* cmd = CreateCommand(cmd_line);
   try
   {
-    if (!_isBackgroundComamnd(cmd_line))
-      setFGJob(cmd);
-
     job_list->removeFinishedJobs();
     cmd->execute();
 
-    setFGJob(nullptr);
+    setFGJob(JobEntry());
   }
   catch(const std::exception& e)  
   { 
@@ -338,6 +335,9 @@ void ExternalCommand::execute(){
 			this->pid = tmp_pid;//restore shell pid
 		}
 		else{//parent(shell) need to wait
+      JobEntry fg_job = SmallShell::getInstance().getFGJob();
+      SmallShell::getInstance().setFGJob(JobEntry(cmd_line,0,pid));
+
       this->pid = pid;  // enable us to use signal handler ctrl-C
 			int status;
 			if(waitpid(pid,&status,WUNTRACED) == -1 ){//WUNTRACED make father stop waiting when the son was stopped
@@ -515,15 +515,19 @@ void PipeCommand::execute(){
 
 /*****************************************************************************************************************/
 //------------------JobList IMPLEMENTATION----------------
-JobEntry::JobEntry() : uid(0), pid(getpid()) { }
 
-void JobsList::addJob(Command* cmd, bool isStopped)
+void JobsList::addJob(string cmd_line, pid_t pid, time_t start_time, bool isStopped)
 {
-  string cmd_line(cmd->getCmd());
-  int job_pid = cmd->getPID();
   JobState state = isStopped ? JobState::STOP : JobState::RUNNING;
 
-  jobs.push_back(JobEntry(cmd_line, job_i++, job_pid,state));
+  if (jobs.empty())
+    job_i = 1;
+
+  jobs.push_back(JobEntry(cmd_line, job_i++, pid, start_time, state));
+}
+void JobsList::addJob(Command* cmd, bool isStopped)
+{
+  addJob(cmd->getCmd(),cmd->getPID(),time(NULL), isStopped);
 }
 
 void JobsList::printJobsList()
@@ -670,6 +674,10 @@ void KillCommand::execute()
       // should we handle it?
       job.setState(JobState::STOP);
     }
+    else if (signum == SIGCONT && job.getState() == JobState::STOP)
+    {
+      job.setState(JobState::RUNNING);
+    }
     else
     {
       // for any signal need to remove?
@@ -726,21 +734,23 @@ void ForegroundCommand::execute()
 {
   try
   {
-    JobsList* jlist = SmallShell::getInstance().getJobList();
+    SmallShell& smash = SmallShell::getInstance();
+    JobsList* jlist = smash.getJobList();
     JobEntry& job = jobToExec(args_size, args, JobType::FG);
     
     std::cout << job.getCmd() << " : " << job.getPID() << " " << std::endl;
+
+    smash.setFGJob(job);
+    size_t jobPID = job.getPID();
+
     jlist->removeJobById(job.getUID());
 
-    SmallShell::getInstance().setFGJob(this);
-
-    if (kill(job.getPID(),SIGCONT) == -1)
+    if (kill(jobPID,SIGCONT) == -1)
       perror("smash error: kill failed");
 
-    if (waitpid(job.getPID(), nullptr, WCONTINUED) == -1)
+    if (waitpid(jobPID, nullptr, WCONTINUED|WUNTRACED) == -1)
       perror("smash error: waitpid failed");
 
-    job.setState(JobState::RUNNING);
   }
   catch(const std::exception& e)
   {

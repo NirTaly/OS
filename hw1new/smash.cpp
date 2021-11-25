@@ -32,3 +32,14 @@ int main(int argc, char* argv[]) {
 
     return 0;
 }
+
+
+/***    BUGS:
+ * %bug fg after ctrlZ
+ * %bug job-id not kept when backgroundCommand->fg->ctrlZ
+ * 
+ * %bug pipe
+ * 
+ * %work: bg, fg, ctrlZ, ctrlC - regular cases
+ * %work: bg after ctrlZ
+ */

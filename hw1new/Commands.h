@@ -6,7 +6,10 @@
 #include <string>
 #include <exception>
 #include <limits.h> //PATH_MAX
+#include <sys/types.h>
+#include <unistd.h>
 
+#define PRINT_DEBUG(X) {std::cout << X << std::endl;}
 
 #define COMMAND_ARGS_MAX_LENGTH (200)
 #define COMMAND_MAX_ARGS (20)
@@ -157,8 +160,8 @@ class JobsList;
 enum JobState {RUNNING, STOP};
 class JobEntry {
 public:
-  JobEntry();
-  JobEntry(string cmd,size_t id, pid_t pid, JobState state = RUNNING) : uid(id), pid(pid),start_time(time(NULL)), cmd_line(cmd), state(state) {}
+  JobEntry(string cmd="smash",size_t id=0, pid_t pid=getpid(), time_t start_time = time(NULL), JobState state = RUNNING) 
+          : uid(id), pid(pid),start_time(start_time), cmd_line(cmd), state(state) {}
   ~JobEntry() = default;
   time_t getStartTime() const { return start_time; }
   string getCmd() const { return cmd_line; }
@@ -193,8 +196,8 @@ public:
   void setPrompt(std::string new_prompt);
   const std::string& getPrompt() const;
   pid_t getSmashPid() const;
-  Command* getFGJob() const;
-  void setFGJob(Command* );
+  JobEntry getFGJob() const;
+  void setFGJob(JobEntry );
   JobsList* getJobList();
   char** getPrevDir();
   void quit();
@@ -206,7 +209,7 @@ private:
   JobsList* job_list;
   char* prev_dir;
   bool is_alive;
-  Command* fg_job;
+  JobEntry fg_job;
 
   SmallShell();
 };
@@ -235,6 +238,7 @@ public:
   JobsList() : job_i(1) { }
   ~JobsList() = default;
   void addJob(Command* cmd, bool isStopped = false);
+  void addJob(string cmd_line, pid_t pid, time_t start_time = time(NULL), bool isStopped = false);
   void printJobsList();
   void killAllJobs();
   void removeFinishedJobs();
