@@ -644,7 +644,7 @@ void KillCommand::execute()
     size_t jobID;
 
     try{
-      signum = std::stoi(std::string(args[1]));
+      signum = -std::stoi(std::string(args[1]));
       jobID = std::stoull(std::string(args[2]));
     }catch(const std::exception&)
     {
@@ -655,13 +655,28 @@ void KillCommand::execute()
   
     JobEntry& job = jlist->getJobById(jobID);
     int job_pid = job.getPID();
-    int retval = kill(job.getPID(),-signum);
-    if (retval == -1 || signum < -32 || signum >= 0)
-      perror("smash error: kill failed");
-
-    jlist->removeJobById(jobID);
     
+    
+    int retval = kill(job.getPID(),signum);
+    if (retval == -1 || signum > 32 || signum <= 0)
+    {
+      perror("smash error: kill failed");
+      return;
+    }
+    // should we wait()?
+
     std::cout << "signal number " << -signum << " was sent to pid " << job_pid << std::endl;
+    
+    if (signum == SIGSTOP)
+    {
+      // should we handle it?
+    }
+    else
+    {
+      // for any signal need to remove?
+      jlist->removeJobById(jobID);
+    }
+    
   }
   catch(const std::exception& e)
   {
@@ -736,9 +751,9 @@ void BackgroundCommand::execute()
 {
   try
   {
-    SmallShell& smash = SmallShell::getInstance();
+    // SmallShell& smash = SmallShell::getInstance();
+    // JobsList* jlist = smash.getJobList();
 
-    JobsList* jlist = smash.getJobList();
     JobEntry& job = jobToExec(args_size, args, JobType::BG);
     
     if (job.getState() == JobState::RUNNING)
@@ -748,30 +763,19 @@ void BackgroundCommand::execute()
 
     std::string old_cmd = job.getCmd();
     std::cout << old_cmd << " : " << job.getPID() << " " << std::endl;
-    jlist->removeJobById(job.getUID());
+    
+    // jlist->getJobById(job.getUID()).setState(JobState::RUNNING);
+    job.setState(JobState::RUNNING);
 
-    // from now on we want to destroy previous job and call the command again, just now
-    // as background cmd
-    if (kill(job.getPID(),SIGKILL) == -1)
-    {
+    if (kill(job.getPID(),SIGCONT) == -1)
       perror("smash error: kill failed");
-    }
 
-    std::string new_bg_cmd = old_cmd;
-    bool is_fg_cmd = false;
-    if (!_isBackgroundComamnd(old_cmd.c_str()))
-    {
-      new_bg_cmd = old_cmd + "&";
-      is_fg_cmd = true;
-    }
+    char clean_cmd_copy[COMMAND_ARGS_MAX_LENGTH];//just because passing cmd_line to helper functions doesnt work
+	  strcpy(clean_cmd_copy,old_cmd.c_str());
+    _removeBackgroundSign(clean_cmd_copy);
 
-    smash.executeCommand(new_bg_cmd.c_str()); // not good enough, we need specific external command
-    // set job name to the first (without '&')
-    if (is_fg_cmd)
-    {
-      JobEntry& new_job = jlist->getJobById(jlist->getLastJobIndex());
-      new_job.setCmd(old_cmd); // set jobs name to the one without
-    }
+    job.setCmd(clean_cmd_copy);
+
   }
   catch(const std::exception& e)
   {

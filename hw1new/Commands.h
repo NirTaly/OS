@@ -165,6 +165,7 @@ public:
   void setCmd(std::string new_cmd) { cmd_line = new_cmd; }
   size_t getUID() const { return uid; }
   JobState getState() const { return state; }
+  void setState(JobState new_state) { state = new_state; }
   pid_t getPID() const { return pid; }
 private:
   size_t uid;
