@@ -740,6 +740,7 @@ void ForegroundCommand::execute()
     if (waitpid(job.getPID(), nullptr, WCONTINUED) == -1)
       perror("smash error: waitpid failed");
 
+    job.setState(JobState::RUNNING);
   }
   catch(const std::exception& e)
   {
@@ -765,7 +766,6 @@ void BackgroundCommand::execute()
     std::cout << old_cmd << " : " << job.getPID() << " " << std::endl;
     
     // jlist->getJobById(job.getUID()).setState(JobState::RUNNING);
-    job.setState(JobState::RUNNING);
 
     if (kill(job.getPID(),SIGCONT) == -1)
       perror("smash error: kill failed");
@@ -775,7 +775,7 @@ void BackgroundCommand::execute()
     _removeBackgroundSign(clean_cmd_copy);
 
     job.setCmd(clean_cmd_copy);
-
+    job.setState(JobState::RUNNING);
   }
   catch(const std::exception& e)
   {
