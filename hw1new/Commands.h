@@ -243,6 +243,7 @@ public:
   void killAllJobs();
   void removeFinishedJobs();
   JobEntry& getJobById(size_t jobId);
+  JobEntry& getJobByPID(pid_t pid);
   void removeJobById(size_t jobId);
   JobEntry& getLastJob();
   JobEntry& getLastStoppedJob();

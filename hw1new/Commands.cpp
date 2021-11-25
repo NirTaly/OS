@@ -579,6 +579,17 @@ void JobsList::removeFinishedJobs()
   }
 }
 
+JobEntry& JobsList::getJobByPID(pid_t pid)
+{
+  auto it = std::find_if(jobs.begin(), jobs.end(), [pid](JobEntry const& job) { return job.getPID() == pid; });
+  if (it == jobs.end())
+  {
+    throw NotFound("job-id " + std::string(to_string(pid)) + " does not exist");
+  }
+
+  return *it;
+}
+
 JobEntry& JobsList::getJobById(size_t jobId)
 {
   auto it = std::find_if(jobs.begin(), jobs.end(), [jobId](JobEntry const& job) { return job.getUID() == jobId; });

@@ -45,7 +45,28 @@ void ctrlCHandler(int sig_num) {
   }
 }
 
-void alarmHandler(int sig_num) {
-  // TODO: Add your implementation
+void alarmHandler(int sig, siginfo_t *siginfo, void *context)
+{
+  std::cout << "smash got an alarm" << std::endl;
+
+  pid_t send_alarm_pid = siginfo->si_pid;
+
+  kill(send_alarm_pid, SIGKILL);
+
+  SmallShell& smash = SmallShell::getInstance();
+  try
+  {
+    JobEntry& send_job = smash.getJobList()->getJobByPID(send_alarm_pid);
+    std::cout << "smash: " << send_job.getCmd() << " timed out!" << std::endl;
+  }
+  catch(const std::exception& e)
+  {
+    throw runtime_error("alarm: " + std::string(e.what()));
+  }
 }
+
+// void alarmHandler(int sig_num) {
+//   std::cout << "smash got an alarm" << std::endl;
+
+// }
 
