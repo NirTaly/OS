@@ -240,8 +240,8 @@ PipeCommand::PipeCommand(const char* cmd_line) : Command(cmd_line) , is_stderr_p
 	first_cmd = _trim(first_cmd);
 	second_cmd = _trim(second_cmd);
 
-  PRINT_DEBUG("PIPE: first_cmd = " + first_cmd)
-  PRINT_DEBUG("PIPE: sec_cmd = " + second_cmd)
+  // PRINT_DEBUG("PIPE: first_cmd = " + first_cmd)
+  // PRINT_DEBUG("PIPE: sec_cmd = " + second_cmd)
 }
 
 void ChpromptCommand::execute(){
@@ -447,12 +447,11 @@ void PipeCommand::execute(){
 	//questions:
 	//how do i make sure that the reader read only after the writed finished?(parent is reader and waiting?)
 	//for general knowledge, what happens if the reader read before the writer completely finished writing?
+
+  // answer:
+  // you can possibly do it, but need synchronization (probably will be learned later) such as semaphore
 	
-  // int fd_stdin_save = dup(STDIN_FILENO);
-	// int fd_stdout_save = dup(STDOUT_FILENO);
-	// int fd_stderr_save = dup(STDERR_FILENO);
-  
-	int my_pipe[2];//0 for reading, 1 for writing from the pipe
+	int my_pipe[2];
 	if(pipe(my_pipe) == -1){
 		perror("smash error: pipe failed");
 		return;
@@ -505,14 +504,9 @@ void PipeCommand::execute(){
 			perror("smash error: close failed");
             return;	
 		}
-		// if(waitpid(pid,nullptr,WUNTRACED) == -1){
-		// 	perror("smash error: close failed");
-    //         return;
-		// }
-		// else{
-			SmallShell& smash = SmallShell::getInstance();
-			smash.executeCommand(second_cmd.c_str());
-		// }
+	
+    SmallShell& smash = SmallShell::getInstance();
+    smash.executeCommand(second_cmd.c_str());
 
     if(close(fd_stdin_save) == -1){
 			perror("smash error: close failed");
@@ -532,52 +526,6 @@ void PipeCommand::execute(){
     perror("smash error: close failed");
           return;
   }
-	// else{//parent(read)
-  //   int fd_stdin_save = dup(STDIN_FILENO);
-
-	// 	if(dup2(my_pipe[PIPE_READ],STDIN_FILENO) == -1){
-	// 		perror("smash error: dup2 failed");
-  //           return;
-	// 	}
-	// 	if((close(my_pipe[PIPE_READ]) == -1) || (close(my_pipe[PIPE_WRITE]) == -1)){
-	// 		perror("smash error: close failed");
-  //           return;	
-	// 	}
-	// 	if(waitpid(pid,nullptr,WUNTRACED) == -1){
-	// 		perror("smash error: close failed");
-  //           return;
-	// 	}
-	// 	else{
-	// 		SmallShell& smash = SmallShell::getInstance();
-	// 		smash.executeCommand(second_cmd.c_str());
-	// 	}
-
-  //   if(close(is_stderr_pipe ? STDERR_FILENO : STDOUT_FILENO) == -1){
-	// 		perror("smash error: close failed");
-  //         return;	
-	// 	}
-	// }
-	//now we want to restore parent's(smash) fdt
-
-	// if(dup2(fd_stdin_save,0) == -1){
-	// 	perror("smash error: dup2 failed");
-	// 	return;
-	// }
-
-	// if(dup2(fd_stdout_save,1) == -1){
-	// 	perror("smash error: dup2 failed");
-	// 	return;
-	// }
-
-	// if(close(fd_stdin_save) == -1){
-	// 	perror("smash error: close failed");
-	// 	return;
-	// }
-
-	// if(close(fd_stdout_save) == -1){
-	// 	perror("smash error: close failed");
-	// 	return;
-	// }
 }
 
 
