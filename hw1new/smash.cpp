@@ -46,4 +46,7 @@ int main(int argc, char* argv[]) {
 /***    BUGS:
  * %bug sometimes make test failes -> where should put removeAllJobs
  * %bug pipe
+ * 
+ * %check:
+ *      sleep 100& , bg -> print there is no stopped jobs to resume
  */

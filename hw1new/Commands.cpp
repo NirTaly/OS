@@ -123,7 +123,7 @@ Command* SmallShell::CreateCommand(const char* cmd_line) {
   string cmd_s = _trim(string(cmd_line));
   string firstWord = cmd_s.substr(0, cmd_s.find_first_of(" \n"));
   
-  if(strstr(cmd_line, "|") != NULL){
+  if(strstr(cmd_line, "|") != NULL /* || strstr(cmd_line, "|&") != NULL */){
 	return new PipeCommand(cmd_line);  
   }
   else if(strstr(cmd_line, ">") != NULL) {//redirection command
@@ -239,6 +239,9 @@ PipeCommand::PipeCommand(const char* cmd_line) : Command(cmd_line) , is_stderr_p
 	}
 	first_cmd = _trim(first_cmd);
 	second_cmd = _trim(second_cmd);
+
+  PRINT_DEBUG("PIPE: first_cmd = " + first_cmd)
+  PRINT_DEBUG("PIPE: sec_cmd = " + second_cmd)
 }
 
 void ChpromptCommand::execute(){
@@ -425,6 +428,9 @@ void RedirectionCommand::execute(){
 	}
 }
 
+const int PIPE_READ = 0;
+const int PIPE_WRITE = 1;
+
 void PipeCommand::execute(){
 /**
 *Idea:
@@ -441,75 +447,137 @@ void PipeCommand::execute(){
 	//questions:
 	//how do i make sure that the reader read only after the writed finished?(parent is reader and waiting?)
 	//for general knowledge, what happens if the reader read before the writer completely finished writing?
-	int fd_stdin_save = dup(0);
-	int fd_stdout_save = dup(1);
+	
+  // int fd_stdin_save = dup(STDIN_FILENO);
+	// int fd_stdout_save = dup(STDOUT_FILENO);
+	// int fd_stderr_save = dup(STDERR_FILENO);
+  
 	int my_pipe[2];//0 for reading, 1 for writing from the pipe
 	if(pipe(my_pipe) == -1){
 		perror("smash error: pipe failed");
 		return;
 	}
-	int pid = fork();
-	if(pid < 0){
+
+	int pid1 = fork();
+	if(pid1 < 0){
 		perror("smash error: fork failed");
 		return;
 	}
-	else if(pid == 0){//son(write)
+	else if(pid1 == 0){  //first command
 		if(setpgrp() == -1){
 			perror("smash error: setpgrp failed");
-            return;
+          return;
 		}
-		if(dup2(my_pipe[1],is_stderr_pipe ? 2 : 1) == -1){
+		if(dup2(my_pipe[PIPE_WRITE],is_stderr_pipe ? STDERR_FILENO : STDOUT_FILENO) == -1){
 			perror("smash error: dup2 failed");
-            return;
+          return;
 		}
-		if((close(my_pipe[0]) == -1) || (close(my_pipe[1]) == -1)){
+		if((close(my_pipe[PIPE_READ]) == -1) || (close(my_pipe[PIPE_WRITE]) == -1)){
 			perror("smash error: close failed");
-            return;	
+          return;	
 		}
+    
 		SmallShell& smash = SmallShell::getInstance();
 		smash.executeCommand(first_cmd.c_str());
-		// return;
+		
+    if(close(is_stderr_pipe ? STDERR_FILENO : STDOUT_FILENO) == -1){
+			perror("smash error: close failed");
+          return;	
+		}
+
+    exit(EXIT_SUCCESS);
 	}
-	else{//parent(read)
-		if(dup2(my_pipe[0],0) == -1){
+
+  int pid2 = fork();
+  if(pid2 < 0){
+		perror("smash error: fork failed");
+		return;
+	}
+	else if(pid2 == 0)  //sec command
+  {
+    int fd_stdin_save = dup(STDIN_FILENO);
+
+		if(dup2(my_pipe[PIPE_READ],STDIN_FILENO) == -1){
 			perror("smash error: dup2 failed");
             return;
 		}
-		if((close(my_pipe[0]) == -1) || (close(my_pipe[1]) == -1)){
+		if((close(my_pipe[PIPE_READ]) == -1) || (close(my_pipe[PIPE_WRITE]) == -1)){
 			perror("smash error: close failed");
             return;	
 		}
-		if(waitpid(pid,nullptr,WUNTRACED) == -1){
-			perror("smash error: close failed");
-            return;
-		}
-		else{
+		// if(waitpid(pid,nullptr,WUNTRACED) == -1){
+		// 	perror("smash error: close failed");
+    //         return;
+		// }
+		// else{
 			SmallShell& smash = SmallShell::getInstance();
 			smash.executeCommand(second_cmd.c_str());
-		}
+		// }
 
-	}
+    if(close(fd_stdin_save) == -1){
+			perror("smash error: close failed");
+          return;	
+		}
+    
+    exit(EXIT_SUCCESS);
+  }
+
+
+  if(close(my_pipe[PIPE_READ]) == -1 || close(my_pipe[PIPE_WRITE])){
+    perror("smash error: close failed");
+        return;	
+  }
+
+  if(waitpid(pid1,nullptr,WUNTRACED) == -1 || waitpid(pid2,nullptr,WUNTRACED) == -1){
+    perror("smash error: close failed");
+          return;
+  }
+	// else{//parent(read)
+  //   int fd_stdin_save = dup(STDIN_FILENO);
+
+	// 	if(dup2(my_pipe[PIPE_READ],STDIN_FILENO) == -1){
+	// 		perror("smash error: dup2 failed");
+  //           return;
+	// 	}
+	// 	if((close(my_pipe[PIPE_READ]) == -1) || (close(my_pipe[PIPE_WRITE]) == -1)){
+	// 		perror("smash error: close failed");
+  //           return;	
+	// 	}
+	// 	if(waitpid(pid,nullptr,WUNTRACED) == -1){
+	// 		perror("smash error: close failed");
+  //           return;
+	// 	}
+	// 	else{
+	// 		SmallShell& smash = SmallShell::getInstance();
+	// 		smash.executeCommand(second_cmd.c_str());
+	// 	}
+
+  //   if(close(is_stderr_pipe ? STDERR_FILENO : STDOUT_FILENO) == -1){
+	// 		perror("smash error: close failed");
+  //         return;	
+	// 	}
+	// }
 	//now we want to restore parent's(smash) fdt
 
-	if(dup2(fd_stdin_save,0) == -1){
-		perror("smash error: dup2 failed");
-		return;
-	}
+	// if(dup2(fd_stdin_save,0) == -1){
+	// 	perror("smash error: dup2 failed");
+	// 	return;
+	// }
 
-	if(dup2(fd_stdout_save,1) == -1){
-		perror("smash error: dup2 failed");
-		return;
-	}
+	// if(dup2(fd_stdout_save,1) == -1){
+	// 	perror("smash error: dup2 failed");
+	// 	return;
+	// }
 
-	if(close(fd_stdin_save) == -1){
-		perror("smash error: close failed");
-		return;
-	}
+	// if(close(fd_stdin_save) == -1){
+	// 	perror("smash error: close failed");
+	// 	return;
+	// }
 
-	if(close(fd_stdout_save) == -1){
-		perror("smash error: close failed");
-		return;
-	}
+	// if(close(fd_stdout_save) == -1){
+	// 	perror("smash error: close failed");
+	// 	return;
+	// }
 }
 
 
