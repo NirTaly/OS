@@ -295,7 +295,7 @@ void GetCurrDirCommand::execute(){
 
 void ChangeDirCommand::execute(){
     if(args_size > 2){
-    	cerr<<"cd: too many arguments"<<endl;
+    	cerr<<"smash error: cd: too many arguments"<<endl;
     	return;
     }
 	else if(args_size == 1){
@@ -310,7 +310,7 @@ void ChangeDirCommand::execute(){
 
 	if(strcmp(args[1],"-") == 0){
 		if(strcmp(*prev_dir,"") == 0){
-			cerr<<"cd: OLDPWD not set"<<endl;
+			cerr<<"smash error: cd: OLDPWD not set"<<endl;
             return;
 		}
 		else if(chdir(*prev_dir) == -1){
@@ -344,12 +344,14 @@ void ExternalCommand::execute(){
 			char* const execv_argv[4] = {(char*)"/bin/bash",(char*)"-c",clean_cmd_copy,nullptr}; 
 			if(execv(execv_argv[0],execv_argv) == -1){
 				perror("smash error: exec failed");
-            	exit(1);
+        delete this;
+        exit(EXIT_FAILURE);
 			}
 		}
 		else{
-      		perror("smash error: setpgrp failed");
-      		exit(1);
+      perror("smash error: setpgrp failed");
+      delete this;
+      exit(EXIT_FAILURE);
 		}
 	}
 	else{
@@ -362,10 +364,10 @@ void ExternalCommand::execute(){
 			this->pid = tmp_pid;//restore shell pid
 		}
 		else{//parent(shell) need to wait
-     		JobEntry fg_job = SmallShell::getInstance().getFGJob();
-      		SmallShell::getInstance().setFGJob(JobEntry(cmd_line,0,pid));
+      JobEntry fg_job = SmallShell::getInstance().getFGJob();
+      SmallShell::getInstance().setFGJob(JobEntry(cmd_line,0,pid));
 
-      		this->pid = pid;  // enable us to use signal handler ctrl-C
+      this->pid = pid;  // enable us to use signal handler ctrl-C
 			int status;
 			if(waitpid(pid,&status,WUNTRACED) == -1 ){//WUNTRACED make father stop waiting when the son was stopped
                 perror("smash error: waitpid failed");
@@ -504,68 +506,70 @@ void PipeCommand::execute(){
 	else if(pid1 == 0){  //first command
 		if(setpgrp() == -1){
 			perror("smash error: setpgrp failed");
-          	exit(1);
+      exit(EXIT_FAILURE);
 		}
 		if(dup2(my_pipe[PIPE_WRITE],is_stderr_pipe ? STDERR_FILENO : STDOUT_FILENO) == -1){
 			perror("smash error: dup2 failed");
-          	exit(1);
+      exit(EXIT_FAILURE);
 		}
 		if((close(my_pipe[PIPE_READ]) == -1) || (close(my_pipe[PIPE_WRITE]) == -1)){
 			perror("smash error: close failed");
-         	exit(1);	
+      exit(EXIT_FAILURE);
 		}
     
 		SmallShell& smash = SmallShell::getInstance();
 		smash.executeCommand(first_cmd.c_str());
 		
-		if(close(is_stderr_pipe ? STDERR_FILENO : STDOUT_FILENO) == -1){
+    if(close(is_stderr_pipe ? STDERR_FILENO : STDOUT_FILENO) == -1){
 			perror("smash error: close failed");
-			exit(1);	
+      delete this;
+      exit(EXIT_FAILURE);
 		}
 
-    	delete this;
-    	exit(EXIT_SUCCESS);
+    delete this;
+    exit(EXIT_SUCCESS);
 	}
 
-  	int pid2 = fork();
-  	if(pid2 < 0){
+  int pid2 = fork();
+  if(pid2 < 0){
 		perror("smash error: fork failed");
 		return;
 	}
 	else if(pid2 == 0){  //sec command
-    	int fd_stdin_save = dup(STDIN_FILENO);
+    int fd_stdin_save = dup(STDIN_FILENO);
 
 		if(dup2(my_pipe[PIPE_READ],STDIN_FILENO) == -1){
 			perror("smash error: dup2 failed");
-            exit(1);
+      exit(EXIT_FAILURE);
 		}
 		if((close(my_pipe[PIPE_READ]) == -1) || (close(my_pipe[PIPE_WRITE]) == -1)){
 			perror("smash error: close failed");
-            exit(1);	
+      exit(EXIT_FAILURE);
 		}
 	
-    	SmallShell& smash = SmallShell::getInstance();
-    	smash.executeCommand(second_cmd.c_str());
+    SmallShell& smash = SmallShell::getInstance();
+    smash.executeCommand(second_cmd.c_str());
 
-    	if(close(fd_stdin_save) == -1){
+    if(close(fd_stdin_save) == -1){
 			perror("smash error: close failed");
-          	exit(1);	
+      delete this;
+      exit(EXIT_FAILURE);
 		}
     
-    	delete this;
-    	exit(EXIT_SUCCESS);
+    delete this;
+    exit(EXIT_SUCCESS);
   }
 
 
-  	if(close(my_pipe[PIPE_READ]) == -1 || close(my_pipe[PIPE_WRITE])){
-		perror("smash error: close failed");
-        return;	
-  	}
+  if(close(my_pipe[PIPE_READ]) == -1 || close(my_pipe[PIPE_WRITE])){
+    perror("smash error: close failed");
+      return;	
+  }
 
-  	if(waitpid(pid1,nullptr,WUNTRACED) == -1 || waitpid(pid2,nullptr,WUNTRACED) == -1){
-    	perror("smash error: close failed");
-    	return;
-  	}
+  if(waitpid(pid1,nullptr,WUNTRACED) == -1 || waitpid(pid2,nullptr,WUNTRACED) == -1){
+    perror("smash error: close failed");
+      return;
+  }
 }
 
 
@@ -594,6 +598,8 @@ void JobsList::addJob(Command* cmd, bool isStopped)
 
 void JobsList::printJobsList()
 {
+  removeFinishedJobs();
+
   for (const JobEntry& job : jobs)
   {
     std::cout << '[' << job.getUID() << "] " << job.getCmd() << " : " << job.getPID() << " " << difftime(time(NULL),job.getStartTime()) << " secs";

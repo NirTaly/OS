@@ -16,7 +16,6 @@ int main(int argc, char* argv[]) {
         perror("smash error: failed to set ctrl-C handler");
     }
 
-
     struct sigaction new_act;
     bzero(&new_act, sizeof(struct sigaction));
 
