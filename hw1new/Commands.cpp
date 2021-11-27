@@ -767,7 +767,6 @@ JobEntry& jobToExec(int args_size, char* args[COMMAND_MAX_ARGS], JobType job_typ
   {
     throw invalid_argument("invalid arguments");
   }
-
 }
 
 void ForegroundCommand::execute()
@@ -863,7 +862,7 @@ void HeadCommand::execute()
   std::string file_name;
 
   if (args_size == 1)
-    throw ("head: not enough arguments");
+    throw runtime_error("head: not enough arguments");
   else if (args_size > 3)
     throw invalid_argument("invalid arguments");
   else if (args_size == 3)
