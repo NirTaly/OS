@@ -6,8 +6,10 @@
 #include <sys/wait.h>
 #include <iomanip>
 #include <algorithm>
-#include "Commands.h"
 #include <fcntl.h>//redirection
+#include <fstream>
+
+#include "Commands.h"
 
 const std::string WHITESPACE = " \n\r\t\f\v";//from piazza
 
@@ -155,6 +157,9 @@ Command* SmallShell::CreateCommand(const char* cmd_line) {
   }
   else if (firstWord.compare("quit") == 0) {
     return new QuitCommand(cmd_line);
+  }
+  else if (firstWord.compare("head") == 0) {
+    return new HeadCommand(cmd_line);
   }
   else {
     return new ExternalCommand(cmd_line);
@@ -779,12 +784,18 @@ void ForegroundCommand::execute()
     jlist->removeJobById(job.getUID());
 
     if (kill(jobPID,SIGCONT) == -1)
+    {
       perror("smash error: kill failed");
+      return;
+    }
 
     int status;
     int retval = waitpid(jobPID, &status, WUNTRACED);
     if (retval == -1)
+    {
       perror("smash error: waitpid failed");
+      return;
+    }
 
     if (WIFSTOPPED(status))
     {
@@ -812,7 +823,10 @@ void BackgroundCommand::execute()
     std::cout << old_cmd << " : " << job.getPID() << " " << std::endl;
     
     if (kill(job.getPID(),SIGCONT) == -1)
+    {
       perror("smash error: kill failed");
+      return;
+    }
 
     char clean_cmd_copy[COMMAND_ARGS_MAX_LENGTH];
 	  strcpy(clean_cmd_copy,old_cmd.c_str());
@@ -839,4 +853,46 @@ void QuitCommand::execute()
     }
 
     smash.quit();
+}
+
+void HeadCommand::execute()
+{
+  int n = 10;
+  std::string file_name;
+
+  if (args_size == 1)
+    throw ("head: not enough arguments");
+  else if (args_size > 3)
+    throw invalid_argument("invalid arguments");
+  else if (args_size == 3)
+  {
+    file_name = args[2];
+    try{
+      n = -std::stoi(std::string(args[1]));
+      if (n < 0) throw runtime_error("");
+    }catch(const std::exception&)
+    {
+      throw invalid_argument("invalid arguments");
+    }
+  }
+  else // args_size == 2
+    file_name = args[1];
+
+  ifstream file(file_name);
+  if (!file.is_open())
+  {
+    perror("smash error: open failed");
+    return;
+  }
+
+  std::string line;
+  for (; std::getline(file,line) && n > 0; n--)
+  {
+    std::cout << line << std::endl;
+  }
+
+  if (file.bad())
+    perror("smash error: read failed");
+  
+  file.close();
 }
