@@ -325,12 +325,12 @@ void ExternalCommand::execute(){
 			char* const execv_argv[4] = {(char*)"/bin/bash",(char*)"-c",clean_cmd_copy,nullptr}; 
 			if(execv(execv_argv[0],execv_argv) == -1){
 				perror("smash error: exec failed");
-            	return;
+            	exit(1);
 			}
 		}
 		else{
-      perror("smash error: setpgrp failed");
-      return;
+      		perror("smash error: setpgrp failed");
+      		exit(1);
 		}
 	}
 	else{
@@ -343,10 +343,10 @@ void ExternalCommand::execute(){
 			this->pid = tmp_pid;//restore shell pid
 		}
 		else{//parent(shell) need to wait
-      JobEntry fg_job = SmallShell::getInstance().getFGJob();
-      SmallShell::getInstance().setFGJob(JobEntry(cmd_line,0,pid));
+     		JobEntry fg_job = SmallShell::getInstance().getFGJob();
+      		SmallShell::getInstance().setFGJob(JobEntry(cmd_line,0,pid));
 
-      this->pid = pid;  // enable us to use signal handler ctrl-C
+      		this->pid = pid;  // enable us to use signal handler ctrl-C
 			int status;
 			if(waitpid(pid,&status,WUNTRACED) == -1 ){//WUNTRACED make father stop waiting when the son was stopped
                 perror("smash error: waitpid failed");
@@ -442,20 +442,14 @@ void PipeCommand::execute(){
 *pipeline command format is command1 | command2
 *1)smash create the pipeline
 *2)smash uses fork
-*3)smash(parent) run command1 and output it to the buffer
-*4)child run command2 with input from the buffer
+*3)son1 run command1 and output it to the buffer
+*4)smash uses fork again
+*5)son2 run command2 with input from the buffer
 */
 	if(strstr(first_cmd.c_str(), "&") != NULL){
 		cerr<<"pipe: invalid command"<<endl;//need to ask what to do in this case
   	}
 
-	//questions:
-	//how do i make sure that the reader read only after the writed finished?(parent is reader and waiting?)
-	//for general knowledge, what happens if the reader read before the writer completely finished writing?
-
-  // answer:
-  // you can possibly do it, but need synchronization (probably will be learned later) such as semaphore
-	
 	int my_pipe[2];
 	if(pipe(my_pipe) == -1){
 		perror("smash error: pipe failed");
@@ -470,69 +464,68 @@ void PipeCommand::execute(){
 	else if(pid1 == 0){  //first command
 		if(setpgrp() == -1){
 			perror("smash error: setpgrp failed");
-          return;
+          	exit(1);
 		}
 		if(dup2(my_pipe[PIPE_WRITE],is_stderr_pipe ? STDERR_FILENO : STDOUT_FILENO) == -1){
 			perror("smash error: dup2 failed");
-          return;
+          	exit(1);
 		}
 		if((close(my_pipe[PIPE_READ]) == -1) || (close(my_pipe[PIPE_WRITE]) == -1)){
 			perror("smash error: close failed");
-          return;	
+         	exit(1);	
 		}
     
 		SmallShell& smash = SmallShell::getInstance();
 		smash.executeCommand(first_cmd.c_str());
 		
-    if(close(is_stderr_pipe ? STDERR_FILENO : STDOUT_FILENO) == -1){
+		if(close(is_stderr_pipe ? STDERR_FILENO : STDOUT_FILENO) == -1){
 			perror("smash error: close failed");
-          return;	
+			exit(1);	
 		}
 
-    delete this;
-    exit(EXIT_SUCCESS);
+    	delete this;
+    	exit(EXIT_SUCCESS);
 	}
 
-  int pid2 = fork();
-  if(pid2 < 0){
+  	int pid2 = fork();
+  	if(pid2 < 0){
 		perror("smash error: fork failed");
 		return;
 	}
-	else if(pid2 == 0)  //sec command
-  {
-    int fd_stdin_save = dup(STDIN_FILENO);
+	else if(pid2 == 0){  //sec command
+    	int fd_stdin_save = dup(STDIN_FILENO);
 
 		if(dup2(my_pipe[PIPE_READ],STDIN_FILENO) == -1){
 			perror("smash error: dup2 failed");
-            return;
+            exit(1);
 		}
 		if((close(my_pipe[PIPE_READ]) == -1) || (close(my_pipe[PIPE_WRITE]) == -1)){
 			perror("smash error: close failed");
-            return;	
+            exit(1);;	
 		}
 	
-    SmallShell& smash = SmallShell::getInstance();
-    smash.executeCommand(second_cmd.c_str());
+    	SmallShell& smash = SmallShell::getInstance();
+    	smash.executeCommand(second_cmd.c_str());
 
-    if(close(fd_stdin_save) == -1){
+    	if(close(fd_stdin_save) == -1){
 			perror("smash error: close failed");
-          return;	
+          	exit(1);	
 		}
     
-    delete this;
-    exit(EXIT_SUCCESS);
+    	delete this;
+    	exit(EXIT_SUCCESS);
   }
 
 
-  if(close(my_pipe[PIPE_READ]) == -1 || close(my_pipe[PIPE_WRITE])){
-    perror("smash error: close failed");
+  	if(close(my_pipe[PIPE_READ]) == -1 || close(my_pipe[PIPE_WRITE])){
+		perror("smash error: close failed");
         return;	
-  }
+  	}
 
-  if(waitpid(pid1,nullptr,WUNTRACED) == -1 || waitpid(pid2,nullptr,WUNTRACED) == -1){
-    perror("smash error: close failed");
-          return;
-  }
+  	if(waitpid(pid1,nullptr,WUNTRACED) == -1 || waitpid(pid2,nullptr,WUNTRACED) == -1){
+    	perror("smash error: close failed");
+    	return;
+  	}
 }
 
 
