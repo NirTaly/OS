@@ -489,6 +489,7 @@ void PipeCommand::execute(){
           return;	
 		}
 
+    delete this;
     exit(EXIT_SUCCESS);
 	}
 
@@ -518,6 +519,7 @@ void PipeCommand::execute(){
           return;	
 		}
     
+    delete this;
     exit(EXIT_SUCCESS);
   }
 

@@ -2,6 +2,7 @@
 #include <unistd.h>
 #include <sys/wait.h>
 #include <signal.h>
+#include <string.h>
 
 #include "Commands.h"
 #include "signals.h"
@@ -16,6 +17,8 @@ int main(int argc, char* argv[]) {
     }
     
     struct sigaction sig_act;
+    bzero(&sig_act, sizeof(struct sigaction));
+
     sig_act.sa_sigaction = *alarmHandler;
     sig_act.sa_flags |= SA_SIGINFO;
 
@@ -45,7 +48,6 @@ int main(int argc, char* argv[]) {
 
 /***    BUGS:
  * %bug sometimes make test failes -> where should put removeAllJobs
- * %bug pipe
  * 
  * %check:
  *      sleep 100& , bg -> print there is no stopped jobs to resume
