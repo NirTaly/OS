@@ -398,7 +398,7 @@ void RedirectionCommand::execute(){
 	}
 	int fd;
 	if(is_append == 0){
-		fd = open(out_file.c_str(),(O_WRONLY| O_CREAT ),0666); 
+		fd = open(out_file.c_str(),(O_WRONLY| O_CREAT | O_TRUNC),0666); 
 	}
 	else{
 		fd = open(out_file.c_str(),(O_WRONLY| O_CREAT | O_APPEND),0666);

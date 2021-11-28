@@ -15,7 +15,14 @@ int main(int argc, char* argv[]) {
     if (signal(SIGINT , ctrlCHandler) == SIG_ERR) {
         perror("smash error: failed to set ctrl-C handler");
     }
+
+    // if (signal(SIGALRM , alarmHandler) == SIG_ERR) {
+    //     perror("smash error: failed to set ctrl-C handler");
+    // }
     
+
+    
+
     struct sigaction sig_act;
     bzero(&sig_act, sizeof(struct sigaction));
 
