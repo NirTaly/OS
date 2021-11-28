@@ -11,7 +11,6 @@ void ctrlZHandler(int sig_num) {
 
   SmallShell& smash = SmallShell::getInstance();
   JobEntry fg_job = smash.getFGJob();
-
   if (fg_job.getPID() != smash.getSmashPid())
   {
     if (kill(fg_job.getPID(), SIGTSTP) == -1)
@@ -25,7 +24,13 @@ void ctrlZHandler(int sig_num) {
 }
 
 void ctrlCHandler(int sig_num){
-  	std::cout << "smash: got ctrl-C" << std::endl;
+  std::cout << "smash: got ctrl-C" << std::endl;
+  //inside a handler its better to use signal safe functions
+  // const char* msg = "smash: got ctrl-C\n";
+  // if(write(STDOUT_FILENO, msg, strlen(msg)) == -1){
+  //   perror("smash error: write failed");
+	// 	return;
+  // }
 
 	SmallShell& smash = SmallShell::getInstance();
 	JobEntry fg_job = smash.getFGJob();
@@ -69,10 +74,22 @@ void alarmHandler(int sig, siginfo_t *siginfo, void *context)
   std::cout << "smash got an alarm" << std::endl;
 
   pid_t send_alarm_pid = siginfo->si_pid;
+  //delete
 
-  kill(send_alarm_pid, SIGKILL);
-
+  cout<<"alarm sender pid: "<<send_alarm_pid<<endl;
+  //end delete
   SmallShell& smash = SmallShell::getInstance();
+  
+  if(smash.getSmashPid() != send_alarm_pid){
+    if(kill(send_alarm_pid, SIGKILL) == -1){
+        perror("smash error: kill failed");
+		    return;
+    }
+  }
+  else{//delete else and its content
+    cout<<"smash caused the alarm"<<endl;
+  }
+
   try
   {
     JobEntry& send_job = smash.getJobList()->getJobByPID(send_alarm_pid);

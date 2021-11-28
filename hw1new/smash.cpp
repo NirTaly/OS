@@ -16,27 +16,40 @@ int main(int argc, char* argv[]) {
         perror("smash error: failed to set ctrl-C handler");
     }
 
-    // if (signal(SIGALRM , alarmHandler) == SIG_ERR) {
-    //     perror("smash error: failed to set ctrl-C handler");
-    // }
-    
 
-    
+    struct sigaction new_act;
+    // bzero(&new_act, sizeof(struct sigaction));
+    //
+    // alarm(15);
+    //
 
-    struct sigaction sig_act;
-    bzero(&sig_act, sizeof(struct sigaction));
+    new_act.sa_sigaction = alarmHandler;
+    new_act.sa_flags = SA_SIGINFO | SA_RESTART;
 
-    sig_act.sa_sigaction = *alarmHandler;
-    sig_act.sa_flags |= SA_SIGINFO;
-
-    if (sigaction(SIGALRM, &sig_act, NULL) != 0) 
+    if (sigaction(SIGALRM, &new_act, NULL) != 0) 
     {
         printf("error sigaction()");
         return errno;
     }
-
     SmallShell& smash = SmallShell::getInstance();
     while(smash.isAlive()) {
+
+        //dell
+        /*
+        // test SIGALRM handler
+        JobsList* jlist = smash.getJobList();
+        try{
+            JobEntry je = jlist->getLastJob();
+            int jid = je.getPID();
+            std::cout<<"job id is: "<<jid<<std::endl;
+            if(jid != smash.getSmashPid()){
+                kill(jid,SIGALRM);
+            }
+        }catch(const std::exception& e){
+            std::cerr << "smash error: " << e.what() << '\n';
+        }
+        //
+        */
         std::cout << smash.getPrompt() <<"> ";
         std::string cmd_line;        
         
