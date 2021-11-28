@@ -243,7 +243,6 @@ PipeCommand::PipeCommand(const char* cmd_line) : Command(cmd_line) , is_stderr_p
 		second_cmd = full_str_cmd.substr(i+1,full_str_cmd.size()-1-i);
 	}
 
-  PRINT_DEBUG("PIPE: sec_cmd = " + second_cmd)
   // //check for starting &
   // for(int i = 0; i < second_cmd.size();i++){
   //   if(second_cmd[i] != '&' || second_cmd[i] != ' ' {
@@ -265,7 +264,8 @@ PipeCommand::PipeCommand(const char* cmd_line) : Command(cmd_line) , is_stderr_p
 	first_cmd = _trim(first_cmd);
 	second_cmd = _trim(second_cmd);
 
-  PRINT_DEBUG("PIPE: first_cmd = " + first_cmd)
+  // PRINT_DEBUG("PIPE: first_cmd = " + first_cmd)
+  // PRINT_DEBUG("PIPE: sec_cmd = " + second_cmd)
 }
 
 void ChpromptCommand::execute(){
@@ -465,7 +465,7 @@ void PipeCommand::execute(){
 */
   bool leading_ampersand = false;
 
-  for(int i = 0; i < second_cmd.size();i++){
+  for(unsigned int i = 0; i < second_cmd.size();i++){
     if(second_cmd[i] != ' '){
       if(second_cmd[i] == '&'){
         leading_ampersand = true;
@@ -483,6 +483,9 @@ void PipeCommand::execute(){
   for(int i = second_cmd.size()-1; i >=0; i--){
     if(second_cmd[i] == '&'){
       second_cmd[i] = ' ';
+      break;
+    }
+    else if(second_cmd[i] != ' '){
       break;
     }
   }
