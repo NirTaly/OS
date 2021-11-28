@@ -76,7 +76,7 @@ void alarmHandler(int sig, siginfo_t *siginfo, void *context)
   pid_t send_alarm_pid = siginfo->si_pid;
   //delete
 
-  cout<<"alarm sender pid: "<<send_alarm_pid<<endl;
+  // cout<<"alarm sender pid: "<<send_alarm_pid<<endl;
   //end delete
   SmallShell& smash = SmallShell::getInstance();
   
@@ -86,14 +86,23 @@ void alarmHandler(int sig, siginfo_t *siginfo, void *context)
 		    return;
     }
   }
-  else{//delete else and its content
-    cout<<"smash caused the alarm"<<endl;
-  }
+  // else{//delete else and its content
+  //   cout<<"smash caused the alarm"<<endl;
+  // }
 
   try
-  {
-    JobEntry& send_job = smash.getJobList()->getJobByPID(send_alarm_pid);
-    std::cout << "smash: " << send_job.getCmd() << " timed out!" << std::endl;
+  { 
+    string sender_cmd;
+    JobEntry fg_job = smash.getFGJob();
+
+    if(fg_job.getPID() == send_alarm_pid){
+      sender_cmd = fg_job.getCmd();
+    }
+    else{
+      JobEntry& send_job = smash.getJobList()->getJobByPID(send_alarm_pid);
+      sender_cmd = send_job.getCmd();
+    }
+    std::cout << "smash: " << sender_cmd << " timed out!" << std::endl;
   }
   catch(const std::exception& e)
   {

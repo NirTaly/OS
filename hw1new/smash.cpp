@@ -18,10 +18,7 @@ int main(int argc, char* argv[]) {
 
 
     struct sigaction new_act;
-    // bzero(&new_act, sizeof(struct sigaction));
-    //
-    // alarm(15);
-    //
+    bzero(&new_act, sizeof(struct sigaction));
 
     new_act.sa_sigaction = alarmHandler;
     new_act.sa_flags = SA_SIGINFO | SA_RESTART;
@@ -35,22 +32,35 @@ int main(int argc, char* argv[]) {
     while(smash.isAlive()) {
 
         //dell
-        /*
-        // test SIGALRM handler
-        JobsList* jlist = smash.getJobList();
-        try{
-            JobEntry je = jlist->getLastJob();
-            int jid = je.getPID();
-            std::cout<<"job id is: "<<jid<<std::endl;
-            if(jid != smash.getSmashPid()){
-                kill(jid,SIGALRM);
-            }
-        }catch(const std::exception& e){
-            std::cerr << "smash error: " << e.what() << '\n';
-        }
-        //
-        */
-        std::cout << smash.getPrompt() <<"> ";
+        
+        // // test SIGALRM handler
+        // JobsList* jlist = smash.getJobList();
+        // try{
+        //     JobEntry je = jlist->getLastJob();
+        //     int jid = je.getPID();
+        //     std::cout<<"job id is: "<<jid<<std::endl;
+        //     if(jid != smash.getSmashPid()){
+        //         kill(jid,SIGALRM);
+        //     }
+        // }catch(const std::exception& e){
+        //     std::cerr << "smash error: " << e.what() << '\n';
+        // }
+        // 
+        // int pid = fork();
+        // if(pid == 0){
+        //     sleep(5);
+        //     kill(getppid(),SIGALRM);
+        // }
+        // else{
+        //     std::cout<<"child pid: "<<pid<<std::endl;
+        //     std::cout<<"parent pid: "<<getpid()<<std::endl;
+        //     waitpid(pid,nullptr,WUNTRACED);
+        // }
+        // else{
+        //     std::cout<<"child's pid is "<< pid<<std::endl;
+        //     wait(NULL);
+        // }
+        std::cout<< smash.getPrompt() <<"> ";
         std::string cmd_line;        
         
         std::getline(std::cin, cmd_line);

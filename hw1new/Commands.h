@@ -9,6 +9,7 @@
 #include <sys/types.h>
 #include <unistd.h>
 #include <assert.h>
+#include "signals.h"
 
 #define PRINT_DEBUG(X) {std::cout << X << std::endl;}
 

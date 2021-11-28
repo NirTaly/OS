@@ -243,19 +243,29 @@ PipeCommand::PipeCommand(const char* cmd_line) : Command(cmd_line) , is_stderr_p
 		second_cmd = full_str_cmd.substr(i+1,full_str_cmd.size()-1-i);
 	}
 
+  PRINT_DEBUG("PIPE: sec_cmd = " + second_cmd)
+  // //check for starting &
+  // for(int i = 0; i < second_cmd.size();i++){
+  //   if(second_cmd[i] != '&' || second_cmd[i] != ' ' {
+  //     break;
+  //   }
+  //   else{
+
+  //   }
+  // }
+
   //delete & of the 2nd command
-  for(int i = second_cmd.size()-1; i >=0; i--){
-    if(second_cmd[i] == '&'){
-      second_cmd[i] = ' ';
-      break;
-    }
-  }
+  // for(int i = second_cmd.size()-1; i >=0; i--){
+  //   if(second_cmd[i] == '&'){
+  //     second_cmd[i] = ' ';
+  //     break;
+  //   }
+  // }
 
 	first_cmd = _trim(first_cmd);
 	second_cmd = _trim(second_cmd);
 
-  // PRINT_DEBUG("PIPE: first_cmd = " + first_cmd)
-  // PRINT_DEBUG("PIPE: sec_cmd = " + second_cmd)
+  PRINT_DEBUG("PIPE: first_cmd = " + first_cmd)
 }
 
 void ChpromptCommand::execute(){
@@ -453,9 +463,28 @@ void PipeCommand::execute(){
 *4)smash uses fork again
 *5)son2 run command2 with input from the buffer
 */
-	if(strstr(first_cmd.c_str(), "&") != NULL){
+  bool leading_ampersand = false;
+
+  for(int i = 0; i < second_cmd.size();i++){
+    if(second_cmd[i] != ' '){
+      if(second_cmd[i] == '&'){
+        leading_ampersand = true;
+        break;
+      }
+      break;
+    }
+  }
+
+	if(strstr(first_cmd.c_str(), "&") != NULL || leading_ampersand == true){
 		cerr<<"pipe: invalid command"<<endl;//need to ask what to do in this case
     return;
+  }
+
+  for(int i = second_cmd.size()-1; i >=0; i--){
+    if(second_cmd[i] == '&'){
+      second_cmd[i] = ' ';
+      break;
+    }
   }
 
 	int my_pipe[2];
