@@ -24,26 +24,45 @@ void ctrlZHandler(int sig_num) {
   }
 }
 
+void ctrlCHandler(int sig_num){
+  	std::cout << "smash: got ctrl-C" << std::endl;
 
-void ctrlCHandler(int sig_num) {
-  std::cout << "smash: got ctrl-C" << std::endl;
+	SmallShell& smash = SmallShell::getInstance();
+	JobEntry fg_job = smash.getFGJob();
 
-  SmallShell& smash = SmallShell::getInstance();
-  JobEntry fg_job = smash.getFGJob();
+	if(fg_job.getPID() == smash.getSmashPid()){
+		return;
+	} 
 
-  pid_t smash_pid = smash.getSmashPid();
-
-  if (fg_job.getPID() != smash_pid)
-  {
-    if (kill(fg_job.getPID(), SIGKILL) == -1)
-      perror("smash error: kill failed");
-    
-    if (kill(smash_pid, SIGCONT) == -1)
-      perror("smash error: kill failed");
-      
-    std::cout << "smash: process " << fg_job.getPID() << " was killed" << std::endl;
-  }
+	if(kill(fg_job.getPID(), SIGKILL) == -1){
+		perror("smash error: kill failed");
+		return;
+	}
+		
+	std::cout << "smash: process " << fg_job.getPID() << " was killed" << std::endl;
+	smash.setFGJob(JobEntry());
 }
+
+// void ctrlCHandler(int sig_num) {
+//   std::cout << "smash: got ctrl-C" << std::endl;
+
+//   SmallShell& smash = SmallShell::getInstance();
+//   JobEntry fg_job = smash.getFGJob();
+
+//   pid_t smash_pid = smash.getSmashPid();
+
+//   if (fg_job.getPID() != smash_pid)
+//   {
+//     if (kill(fg_job.getPID(), SIGKILL) == -1)
+//       perror("smash error: kill failed");
+    
+//     if (kill(smash_pid, SIGCONT) == -1)//why do we need this?
+//       perror("smash error: kill failed");
+      
+//     std::cout << "smash: process " << fg_job.getPID() << " was killed" << std::endl;
+//   }
+//  //what about setting FGJob?
+// }
 
 void alarmHandler(int sig, siginfo_t *siginfo, void *context)
 {

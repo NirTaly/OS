@@ -8,6 +8,7 @@
 #include <limits.h> //PATH_MAX
 #include <sys/types.h>
 #include <unistd.h>
+#include <assert.h>
 
 #define PRINT_DEBUG(X) {std::cout << X << std::endl;}
 
@@ -54,6 +55,8 @@ class ExternalCommand : public Command {
 
 class PipeCommand : public Command {
   // TODO: Add your data members
+  static const int PIPE_READ = 0;
+  static const int PIPE_WRITE = 1;
   string full_str_cmd;
   string first_cmd;
   string second_cmd;
@@ -197,7 +200,7 @@ public:
   const std::string& getPrompt() const;
   pid_t getSmashPid() const;
   JobEntry getFGJob() const;
-  void setFGJob(JobEntry );
+  void setFGJob(JobEntry);
   JobsList* getJobList();
   char** getPrevDir();
   void quit();

@@ -398,7 +398,7 @@ void RedirectionCommand::execute(){
 	}
 	int fd;
 	if(is_append == 0){
-		fd = open(out_file.c_str(),(O_WRONLY| O_CREAT),0666); 
+		fd = open(out_file.c_str(),(O_WRONLY| O_CREAT ),0666); 
 	}
 	else{
 		fd = open(out_file.c_str(),(O_WRONLY| O_CREAT | O_APPEND),0666);
@@ -433,8 +433,6 @@ void RedirectionCommand::execute(){
 	}
 }
 
-const int PIPE_READ = 0;
-const int PIPE_WRITE = 1;
 
 void PipeCommand::execute(){
 /**
@@ -501,7 +499,7 @@ void PipeCommand::execute(){
 		}
 		if((close(my_pipe[PIPE_READ]) == -1) || (close(my_pipe[PIPE_WRITE]) == -1)){
 			perror("smash error: close failed");
-            exit(1);;	
+            exit(1);	
 		}
 	
     	SmallShell& smash = SmallShell::getInstance();
@@ -708,7 +706,7 @@ void KillCommand::execute()
       job.setState(JobState::STOP);
     }
     else if (signum == SIGCONT && job.getState() == JobState::STOP)
-    {
+    { 
       job.setState(JobState::RUNNING);
     }
     else
@@ -731,6 +729,9 @@ JobEntry& jobToExec(int args_size, char* args[COMMAND_MAX_ARGS], JobType job_typ
 
   size_t jobID;
 
+  if ( args_size > 2){
+    throw invalid_argument("invalid arguments");
+  }
   if (args_size == 2)
   {
     try{
@@ -741,13 +742,13 @@ JobEntry& jobToExec(int args_size, char* args[COMMAND_MAX_ARGS], JobType job_typ
 
     return jlist->getJobById(jobID);
   }
-  else if (args_size == 1) 
+  else// if (args_size == 1) 
   {
     if (JobType::FG == job_type)
     {
       return jlist->getLastJob();
     }
-    else if (JobType::BG == job_type) // Bg Command
+    else// if (JobType::BG == job_type) // Bg Command
     {
       try {
         return jlist->getLastStoppedJob();
@@ -755,10 +756,6 @@ JobEntry& jobToExec(int args_size, char* args[COMMAND_MAX_ARGS], JobType job_typ
         throw runtime_error("there is no stopped jobs to resume");
       }
     }
-  }
-  else
-  {
-    throw invalid_argument("invalid arguments");
   }
 }
 
@@ -773,11 +770,11 @@ void ForegroundCommand::execute()
     std::cout << job.getCmd() << " : " << job.getPID() << " " << std::endl;
 
     smash.setFGJob(job);
-    size_t jobPID = job.getPID();
+    int jobPID = job.getPID();
 
     jlist->removeJobById(job.getUID());
 
-    if (kill(jobPID,SIGCONT) == -1)
+    if (kill(jobPID,SIGCONT) == -1)//sigcont ignored when recieved by a running process
     {
       perror("smash error: kill failed");
       return;
@@ -785,7 +782,7 @@ void ForegroundCommand::execute()
 
     int status;
     int retval = waitpid(jobPID, &status, WUNTRACED);
-    if (retval == -1)
+    if (retval != jobPID)
     {
       perror("smash error: waitpid failed");
       return;
@@ -841,7 +838,7 @@ void QuitCommand::execute()
     JobsList* jlist = smash.getJobList();
 
     jlist->removeFinishedJobs();
-    if (args_size >= 2 && std::string(args[1]) == "kill")
+    if (args_size >= 2 && string(args[1]) == "kill")
     {
       jlist->killAllJobs();
     }
