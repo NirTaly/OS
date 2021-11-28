@@ -242,6 +242,15 @@ PipeCommand::PipeCommand(const char* cmd_line) : Command(cmd_line) , is_stderr_p
 	else{
 		second_cmd = full_str_cmd.substr(i+1,full_str_cmd.size()-1-i);
 	}
+
+  //delete & of the 2nd command
+  for(int i = second_cmd.size()-1; i >=0; i--){
+    if(second_cmd[i] == '&'){
+      second_cmd[i] = ' ';
+      break;
+    }
+  }
+
 	first_cmd = _trim(first_cmd);
 	second_cmd = _trim(second_cmd);
 
@@ -446,7 +455,8 @@ void PipeCommand::execute(){
 */
 	if(strstr(first_cmd.c_str(), "&") != NULL){
 		cerr<<"pipe: invalid command"<<endl;//need to ask what to do in this case
-  	}
+    return;
+  }
 
 	int my_pipe[2];
 	if(pipe(my_pipe) == -1){
