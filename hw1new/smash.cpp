@@ -18,12 +18,9 @@ int main(int argc, char* argv[]) {
 
     struct sigaction new_act;
     bzero(&new_act, sizeof(struct sigaction));
-<<<<<<< Updated upstream
-=======
     //
     // alarm(15);
     //
->>>>>>> Stashed changes
 
     new_act.sa_sigaction = alarmHandler;
     new_act.sa_flags = SA_SIGINFO | SA_RESTART;
@@ -86,4 +83,18 @@ int main(int argc, char* argv[]) {
  * 
  * %check:
  *      sleep 100& , bg -> print there is no stopped jobs to resume
+ * 
+ * 
+ * 
+ * %tests:
+ * [V] cd
+ * [V] chprompt
+ * [V] jobs
+ * [V] quit
+ * [V] showpid
+ * [X] kill
+ * [X] pipe
+ * [X] redirect
+ * 
+ * [] timeout
  */

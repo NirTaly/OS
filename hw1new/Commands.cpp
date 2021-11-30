@@ -123,9 +123,9 @@ bool SmallShell::isAlive() { return is_alive; }
 */
 Command* SmallShell::CreateCommand(const char* cmd_line) {
   string cmd_s = _trim(string(cmd_line));
-  string firstWord = cmd_s.substr(0, cmd_s.find_first_of(" \n"));
+  string firstWord = cmd_s.substr(0, cmd_s.find_first_of(" \n&"));
   
-  if(strstr(cmd_line, "|") != NULL /* || strstr(cmd_line, "|&") != NULL */){
+  if(strstr(cmd_line, "|") != NULL){
 	return new PipeCommand(cmd_line);  
   }
   else if(strstr(cmd_line, ">") != NULL) {//redirection command
@@ -311,17 +311,17 @@ void ChangeDirCommand::execute(){
 	if(strcmp(args[1],"-") == 0){
 		if(strcmp(*prev_dir,"") == 0){
 			cerr<<"smash error: cd: OLDPWD not set"<<endl;
-            return;
+      return;
 		}
 		else if(chdir(*prev_dir) == -1){
 			perror("smash error: chdir failed");
-  			return;
+      return;
 		}
 	}
-    else if(chdir(args[1]) == -1){ // args[1] != "-"
+  else if(chdir(args[1]) == -1){ // args[1] != "-"
 		perror("smash error: chdir failed");
-  		return;
-    }
+    return;
+  }
 	strcpy(*prev_dir,curr_dir);
 }
 
@@ -519,7 +519,7 @@ void PipeCommand::execute(){
     
 		SmallShell& smash = SmallShell::getInstance();
 		smash.executeCommand(first_cmd.c_str());
-		
+    
     if(close(is_stderr_pipe ? STDERR_FILENO : STDOUT_FILENO) == -1){
 			perror("smash error: close failed");
       delete this;
@@ -576,12 +576,14 @@ void PipeCommand::execute(){
 /*****************************************************************************************************************/
 //------------------JobList IMPLEMENTATION----------------
 
-void JobsList::addJob(string cmd_line, pid_t pid, time_t start_time, bool isStopped, size_t jobID)
+void JobsList::addJob(string cmd_line, pid_t pid, time_t start_time, bool isStopped, int jobID)
 {
   JobState state = isStopped ? JobState::STOP : JobState::RUNNING;
 
   if (jobs.empty())
     job_i = 1;
+  else
+    job_i = jobs.back().getUID() + 1;
 
   if (jobID)
   {
@@ -589,7 +591,10 @@ void JobsList::addJob(string cmd_line, pid_t pid, time_t start_time, bool isStop
     std::sort(jobs.begin(),jobs.end(),[](const JobEntry& a, const JobEntry& b) -> bool { return a.getUID() < b.getUID(); });
   }
   else
-    jobs.push_back(JobEntry(cmd_line, job_i++, pid, start_time, state));
+  {
+
+    jobs.push_back(JobEntry(cmd_line, job_i, pid, start_time, state));
+  }
 }
 void JobsList::addJob(Command* cmd, bool isStopped)
 {
@@ -652,7 +657,7 @@ JobEntry& JobsList::getJobByPID(pid_t pid)
   return *it;
 }
 
-JobEntry& JobsList::getJobById(size_t jobId)
+JobEntry& JobsList::getJobById(int jobId)
 {
   auto it = std::find_if(jobs.begin(), jobs.end(), [jobId](JobEntry const& job) { return job.getUID() == jobId; });
   if (it == jobs.end())
@@ -663,7 +668,7 @@ JobEntry& JobsList::getJobById(size_t jobId)
   return *it;
 }
 
-void JobsList::removeJobById(size_t jobId)
+void JobsList::removeJobById(int jobId)
 {
   auto end = std::remove_if(jobs.begin(), jobs.end(), [jobId](JobEntry& job){return job.getUID() == jobId;});
 
@@ -723,7 +728,7 @@ void KillCommand::execute()
     }
 
     int signum;
-    size_t jobID;
+    int jobID;
 
     try{
       signum = -std::stoi(std::string(args[1]));
@@ -739,14 +744,14 @@ void KillCommand::execute()
     int job_pid = job.getPID();
     
     int retval = kill(job_pid,signum);
-    if (retval == -1 || signum > 32 || signum <= 0)
+    if (retval == -1)
     {
       perror("smash error: kill failed");
       return;
     }
     // should we wait()?
 
-    std::cout << "signal number " << -signum << " was sent to pid " << job_pid << std::endl;
+    std::cout << "signal number " << signum << " was sent to pid " << job_pid << std::endl;
     
     if (signum == SIGTSTP)
     {
@@ -775,7 +780,7 @@ JobEntry& jobToExec(int args_size, char* args[COMMAND_MAX_ARGS], JobType job_typ
 {
   JobsList* jlist = SmallShell::getInstance().getJobList();
 
-  size_t jobID;
+  int jobID;
 
   if ( args_size > 2){
     throw invalid_argument("invalid arguments");
@@ -917,21 +922,49 @@ void HeadCommand::execute()
   else // args_size == 2
     file_name = args[1];
 
-  ifstream file(file_name);
-  if (!file.is_open())
+  // ifstream file(file_name);
+  // if (!file.is_open())
+  // {
+  //   perror("smash error: open failed");
+  //   return;
+  // }
+
+  // std::string line;
+  // for (; std::getline(file,line) && n > 0; n--)
+  // {
+  //   std::cout << line << std::endl;
+  // }
+
+  // if (file.bad())
+  //   perror("smash error: read failed");
+  
+  // file.close();
+
+  FILE* fp = fopen(file_name.c_str(),"r");
+  if (!fp)
   {
     perror("smash error: open failed");
     return;
   }
 
-  std::string line;
-  for (; std::getline(file,line) && n > 0; n--)
+  string res;
+  for (char c = (char)fgetc(fp); c != EOF && n > 0; c = (char)fgetc(fp))
   {
-    std::cout << line << std::endl;
+    if (c == '\n')
+    {
+      std::cout << res << std::endl;
+      res = "";
+      n--;
+    }
+    else if (c != EOF)
+      res.push_back(c);
+  }
+  
+  if (res != "" && n > 0)
+  {
+    // res.pop_back();
+    std::cout << res;
   }
 
-  if (file.bad())
-    perror("smash error: read failed");
-  
-  file.close();
+  fclose(fp);
 }

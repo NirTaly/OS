@@ -164,18 +164,18 @@ class JobsList;
 enum JobState {RUNNING, STOP};
 class JobEntry {
 public:
-  JobEntry(string cmd="smash",size_t id=0, pid_t pid=getpid(), time_t start_time = time(NULL), JobState state = RUNNING) 
+  JobEntry(string cmd="smash",int id=0, pid_t pid=getpid(), time_t start_time = time(NULL), JobState state = RUNNING) 
           : uid(id), pid(pid),start_time(start_time), cmd_line(cmd), state(state) {}
   ~JobEntry() = default;
   time_t getStartTime() const { return start_time; }
   string getCmd() const { return cmd_line; }
   void setCmd(std::string new_cmd) { cmd_line = new_cmd; }
-  size_t getUID() const { return uid; }
+  int getUID() const { return uid; }
   JobState getState() const { return state; }
   void setState(JobState new_state) { state = new_state; }
   pid_t getPID() const { return pid; }
 private:
-  size_t uid;
+  int uid;
   pid_t pid;
   time_t start_time;
   string cmd_line;
@@ -242,19 +242,19 @@ public:
   JobsList() : job_i(1) { }
   ~JobsList() = default;
   void addJob(Command* cmd, bool isStopped = false);
-  void addJob(string cmd_line, pid_t pid, time_t start_time = time(NULL), bool isStopped = false, size_t jobID = 0);
+  void addJob(string cmd_line, pid_t pid, time_t start_time = time(NULL), bool isStopped = false, int jobID = 0);
   void printJobsList();
   void killAllJobs();
   void removeFinishedJobs();
-  JobEntry& getJobById(size_t jobId);
+  JobEntry& getJobById(int jobId);
   JobEntry& getJobByPID(pid_t pid);
-  void removeJobById(size_t jobId);
+  void removeJobById(int jobId);
   JobEntry& getLastJob();
   JobEntry& getLastStoppedJob();
-  size_t getLastJobIndex() const { return job_i-1; }
+  int getLastJobIndex() const { return job_i-1; }
 private:
   vector<JobEntry> jobs;
-  size_t job_i;
+  int job_i;
 };
 
 #endif //SMASH_COMMAND_H_
