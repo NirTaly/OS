@@ -63,8 +63,8 @@ int main(int argc, char* argv[]) {
  * [V] quit
  * [V] showpid
  * [V] kill
- * 
- * [X] pipe
+ * [V] pipe
+
  * [X] redirect
  * 
  * [] timeout
