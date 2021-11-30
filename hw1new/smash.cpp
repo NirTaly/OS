@@ -92,7 +92,7 @@ int main(int argc, char* argv[]) {
  * [V] jobs
  * [V] quit
  * [V] showpid
- * [X] kill
+ * [V] kill
  * [X] pipe
  * [X] redirect
  * 

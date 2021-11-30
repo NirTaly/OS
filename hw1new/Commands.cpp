@@ -762,11 +762,11 @@ void KillCommand::execute()
     { 
       job.setState(JobState::RUNNING);
     }
-    else
-    {
-      // for any signal need to remove?
-      jlist->removeJobById(jobID);
-    }
+    // else
+    // {
+    //   // for any signal need to remove?
+    //   jlist->removeJobById(jobID);
+    // }
     
   }
   catch(const std::exception& e)
