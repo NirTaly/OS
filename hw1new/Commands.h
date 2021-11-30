@@ -27,8 +27,9 @@ protected:
   char* args[COMMAND_MAX_ARGS];
   int args_size;
   pid_t pid;
+  bool isBuiltin;
 public:
-  Command(const char* cmd_line);
+  Command(const char* cmd_line, bool isBuiltin = false );
   virtual ~Command();
   virtual void execute() = 0;//pure virtual
 
@@ -43,7 +44,7 @@ public:
 
 class BuiltInCommand : public Command {
  public:
-  BuiltInCommand(const char* cmd_line) : Command(cmd_line){}
+  BuiltInCommand(const char* cmd_line) : Command(cmd_line,true) {}
   virtual ~BuiltInCommand() {}
 };
 

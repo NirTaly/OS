@@ -10,10 +10,6 @@
                 "*.cpp",
                 "-o",
                 "${fileDirname}/${fileBasenameNoExtension}",
-                " < ", 
-                " ${fileDirname}/unit/head.in ", 
-                " &> ", 
-                " ${fileDirname}/output/head.out "
             ],
             "options": {
                 "cwd": "${fileDirname}"

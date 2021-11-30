@@ -32,36 +32,6 @@ int main(int argc, char* argv[]) {
     }
     SmallShell& smash = SmallShell::getInstance();
     while(smash.isAlive()) {
-
-        //dell
-        
-        // // test SIGALRM handler
-        // JobsList* jlist = smash.getJobList();
-        // try{
-        //     JobEntry je = jlist->getLastJob();
-        //     int jid = je.getPID();
-        //     std::cout<<"job id is: "<<jid<<std::endl;
-        //     if(jid != smash.getSmashPid()){
-        //         kill(jid,SIGALRM);
-        //     }
-        // }catch(const std::exception& e){
-        //     std::cerr << "smash error: " << e.what() << '\n';
-        // }
-        // 
-        // int pid = fork();
-        // if(pid == 0){
-        //     sleep(5);
-        //     kill(getppid(),SIGALRM);
-        // }
-        // else{
-        //     std::cout<<"child pid: "<<pid<<std::endl;
-        //     std::cout<<"parent pid: "<<getpid()<<std::endl;
-        //     waitpid(pid,nullptr,WUNTRACED);
-        // }
-        // else{
-        //     std::cout<<"child's pid is "<< pid<<std::endl;
-        //     wait(NULL);
-        // }
         std::cout<< smash.getPrompt() <<"> ";
         std::string cmd_line;        
         
@@ -93,6 +63,7 @@ int main(int argc, char* argv[]) {
  * [V] quit
  * [V] showpid
  * [V] kill
+ * 
  * [X] pipe
  * [X] redirect
  * 

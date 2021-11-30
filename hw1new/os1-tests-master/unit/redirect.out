@@ -8,10 +8,10 @@ smash> smash> test_redirect
 smash> smash> again_redirect
 smash> smash> again_redirect
 test_redirect
-smash> smash> smash pid is 1428
-smash> smash> smash pid is 1428
-smash pid is 1428
-smash> smash> smash pid is 1428
+smash> smash> smash pid is 18370
+smash> smash> smash pid is 18370
+smash pid is 18370
+smash> smash> smash pid is 18370
 smash> my_sleep
 mypid
 new
@@ -20,7 +20,7 @@ random2.txt
 sub1
 sub2
 sub3
-smash> smash> smash> [1] sleep 100& : 1486 0 secs
+smash> smash> smash> [1] sleep 100& : 18423 1 secs
 smash> smash error: kill: invalid arguments
 cat: k: input file is output file
 smash error: kill: invalid arguments
