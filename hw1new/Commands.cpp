@@ -441,17 +441,23 @@ void RedirectionCommand::execute(){
 		return;
 	}
 
-	if(dup2(fd,1)  == -1){//set fdt[1] to point to the opened file
+	if(dup2(fd,STDOUT_FILENO)  == -1){//set fdt[1] to point to the opened file
 		perror("smash error: dup2 failed");
 		return;
 	}
 	SmallShell& smash = SmallShell::getInstance();
-	smash.executeCommand(left_cmd.c_str());
+	try{
+      smash.executeCommand(left_cmd.c_str());
+  } catch(const std::exception& e)
+  {
+      std::cerr << "smash error: " << e.what() << '\n';
+  } 
+  
 	//smash.CreateCommand(left_cmd.c_str())->execute();
 	//note: command may fail and still a file will be created, but it's the same in bash
 	
 	//reset stdout to point to the screen obj file
-	if(dup2(fdt_screen_ptr,1)  == -1){
+	if(dup2(fdt_screen_ptr,STDOUT_FILENO)  == -1){
 		perror("smash error: dup2 failed");
 		return;
 	}
@@ -570,7 +576,7 @@ void PipeCommand::execute(){
       delete this;
       exit(EXIT_FAILURE);
 		}
-    
+
     delete this;
     exit(EXIT_SUCCESS);
 	}
