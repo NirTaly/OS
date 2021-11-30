@@ -11,14 +11,14 @@ sub3
 smash> 0
 2
 Done: 3
-smash> smash pid is 30773
-smash> smash pid is 30773
+smash> smash pid is 25223
+smash> smash pid is 25223
 smash> /tmp/smash_test
-smash> smash> smash> [1] sleep 20& : 17153 0 secs
-[2] sleep 10& : 17154 0 secs
-smash> signal number 9 was sent to pid 17153
-smash> signal number 9 was sent to pid 17154
-smash> smash> smash> signal number 9 was sent to pid 17429
+smash> smash> smash> [1] sleep 20& : 6664 0 secs
+[2] sleep 10& : 6665 0 secs
+smash> signal number 9 was sent to pid 6664
+smash> signal number 9 was sent to pid 6665
+smash> smash> smash> signal number 9 was sent to pid 6836
 smash> smash> r directory
 smash> r directory
 smash> PWD not set
