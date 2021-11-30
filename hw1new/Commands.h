@@ -15,13 +15,11 @@
 
 #define COMMAND_ARGS_MAX_LENGTH (200)
 #define COMMAND_MAX_ARGS (20)
-// #define PATH_MAX (200)
 
 using std::string;
 using std::vector;
 
 class Command {
-// TODO: Add your data members
 protected:
   const char* cmd_line;
   char* args[COMMAND_MAX_ARGS];
@@ -37,50 +35,45 @@ public:
   char** getArgs() { return args; }
   int getPID() { return pid; }
   void setPID(int new_pid) { pid = new_pid; }
-  //virtual void prepare();
-  //virtual void cleanup();
-  // TODO: Add your extra methods if needed
 };
 
 class BuiltInCommand : public Command {
- public:
+public:
   BuiltInCommand(const char* cmd_line) : Command(cmd_line,true) {}
   virtual ~BuiltInCommand() {}
 };
 
 class ExternalCommand : public Command {
- public:
+public:
   ExternalCommand(const char* cmd_line) : Command(cmd_line) { }
   virtual ~ExternalCommand() {}
   void execute() override;
 };
 
 class PipeCommand : public Command {
-  // TODO: Add your data members
+private:  
   static const int PIPE_READ = 0;
   static const int PIPE_WRITE = 1;
   string full_str_cmd;
   string first_cmd;
   string second_cmd;
   bool is_stderr_pipe;
- public:
+public:
   PipeCommand(const char* cmd_line);
   virtual ~PipeCommand() {}
   void execute() override;
 };
 
 class RedirectionCommand : public Command {
- // TODO: Add your data members
-    string full_str_cmd;
+private:
+  string full_str_cmd;
 	string left_cmd;
 	string out_file;
 	int is_append;
- public:
+public:
   explicit RedirectionCommand(const char* cmd_line);
   virtual ~RedirectionCommand() {}
   void execute() override;
-  //void prepare() override;
-  //void cleanup() override;
 };
 
 class ChangeDirCommand : public BuiltInCommand {
@@ -92,19 +85,18 @@ public:
 };
 
 class GetCurrDirCommand : public BuiltInCommand {
- public:
+public:
   GetCurrDirCommand(const char* cmd_line) : BuiltInCommand(cmd_line){}
   virtual ~GetCurrDirCommand() {}
   void execute() override;
 };
 
 class ShowPidCommand : public BuiltInCommand {
- public:
+public:
   ShowPidCommand(const char* cmd_line) : BuiltInCommand(cmd_line){}
   virtual ~ShowPidCommand() {}
   void execute() override;
 };
-
 
 class JobsList;
 
@@ -130,31 +122,28 @@ public:
 };
 
 class KillCommand : public BuiltInCommand {
- // TODO: Add your data members
- public:
+public:
   KillCommand(const char* cmd_line) : BuiltInCommand(cmd_line) {}
   virtual ~KillCommand() {}
   void execute() override;
 };
 
 class ForegroundCommand : public BuiltInCommand {
- // TODO: Add your data members
- public:
+public:
   ForegroundCommand(const char* cmd_line) : BuiltInCommand(cmd_line) {}
   virtual ~ForegroundCommand() {}
   void execute() override;
 };
 
 class BackgroundCommand : public BuiltInCommand {
- // TODO: Add your data members
- public:
+public:
   BackgroundCommand(const char* cmd_line) : BuiltInCommand(cmd_line) {}
   virtual ~BackgroundCommand() {}
   void execute() override;
 };
 
 class HeadCommand : public BuiltInCommand {
- public:
+public:
   HeadCommand(const char* cmd_line) : BuiltInCommand(cmd_line) {}
   virtual ~HeadCommand() {}
   void execute() override;

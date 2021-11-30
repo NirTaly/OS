@@ -135,7 +135,6 @@ bool SmallShell::isAlive() { return is_alive; }
 Command* SmallShell::CreateCommand(const char* cmd_line) {
   string cmd_s = _trim(string(cmd_line));
   string firstWord = cmd_s.substr(0, cmd_s.find_first_of(" \n&"));
-  // string firstWord = cmd_s.substr(0, cmd_s.find_first_of(" \n"));
   
   if(strstr(cmd_line, "|") != NULL){
 	return new PipeCommand(cmd_line);  
@@ -255,29 +254,8 @@ PipeCommand::PipeCommand(const char* cmd_line) : Command(cmd_line) , is_stderr_p
 		second_cmd = full_str_cmd.substr(i+1,full_str_cmd.size()-1-i);
 	}
 
-  // //check for starting &
-  // for(int i = 0; i < second_cmd.size();i++){
-  //   if(second_cmd[i] != '&' || second_cmd[i] != ' ' {
-  //     break;
-  //   }
-  //   else{
-
-  //   }
-  // }
-
-  //delete & of the 2nd command
-  // for(int i = second_cmd.size()-1; i >=0; i--){
-  //   if(second_cmd[i] == '&'){
-  //     second_cmd[i] = ' ';
-  //     break;
-  //   }
-  // }
-
 	first_cmd = _trim(first_cmd);
 	second_cmd = _trim(second_cmd);
-
-  // PRINT_DEBUG("PIPE: first_cmd = " + first_cmd)
-  // PRINT_DEBUG("PIPE: sec_cmd = " + second_cmd)
 }
 
 void ChpromptCommand::execute(){
@@ -337,7 +315,6 @@ void ChangeDirCommand::execute(){
 	strcpy(*prev_dir,curr_dir);
 }
 
-
 void ExternalCommand::execute(){
 	int pid = fork();
 	if(pid < 0){
@@ -390,40 +367,7 @@ void ExternalCommand::execute(){
 }
 
 void RedirectionCommand::execute(){
-	/*CAN PROBABLY DELETE THIS PART
 
-	string str_cmd = cmd_line;
-	string left_cmd;
-	string out_file;
-	int is_append = 0;
-	const char* p = strstr(cmd_line, ">"); 
-	if(strstr(cmd_line, ">>") != NULL){
-		is_append = 1;
-	}
-	int i = 0;
-	while((cmd_line+i) != p){
-		i++;
-	}
-	if(i != 0){
-		left_cmd = str_cmd.substr(0,i);
-	}
-	out_file = str_cmd.substr(i+1+is_append,str_cmd.size()-1-i-is_append);
-	left_cmd = _trim(left_cmd);
-
-	//ignore &
-	for(int i = left_cmd.size()-1; i > 0; i--){
-        if(left_cmd[i] == '&'){
-            left_cmd[i] = ' ';
-            break;
-        }
-    }
-
-	out_file = _trim(out_file);
-	*/
-	
-	//we want to close stdout, change it to point to the file that the output has to go to,
-	//create and execute the given command. but we want the restore fdt(1) to point to the screen
-	//at the end of the process so we have to duplicate it.
 	int fdt_screen_ptr = dup(1);
 	if(fdt_screen_ptr == -1){
 		perror("smash error: dup failed");
@@ -453,7 +397,6 @@ void RedirectionCommand::execute(){
       std::cerr << "smash error: " << e.what() << '\n';
   } 
   
-	//smash.CreateCommand(left_cmd.c_str())->execute();
 	//note: command may fail and still a file will be created, but it's the same in bash
 	
 	//reset stdout to point to the screen obj file
@@ -526,17 +469,6 @@ void PipeCommand::execute(){
 			perror("smash error: setpgrp failed");
       exit(EXIT_FAILURE);
 		}
-    // if (is_stderr_pipe)
-    // {
-    //   if(dup2(my_pipe[PIPE_WRITE],STDERR_FILENO) == -1){
-    //     perror("smash error: dup2 failed");
-    //     exit(EXIT_FAILURE);
-    //   }
-    // }
-    // if(dup2(my_pipe[PIPE_WRITE], STDOUT_FILENO) == -1){
-    //   perror("smash error: dup2 failed");
-    //   exit(EXIT_FAILURE);
-    // }
 
     if(dup2(my_pipe[PIPE_WRITE], is_stderr_pipe ? STDERR_FILENO : STDOUT_FILENO) == -1){
         perror("smash error: dup2 failed");
@@ -555,22 +487,6 @@ void PipeCommand::execute(){
       std::cerr << "smash error: " << e.what() << '\n';
     }
     
-    
-    // if (is_stderr_pipe)
-    // {
-    //   if(close(STDERR_FILENO) == -1){
-    //     perror("smash error: close failed");
-    //     delete this;
-    //     exit(EXIT_FAILURE);
-		//   }
-    // }
-
-    // if(close(STDOUT_FILENO) == -1){
-		// 	perror("smash error: close failed");
-    //   delete this;
-    //   exit(EXIT_FAILURE);
-		// }
-
     if(close(is_stderr_pipe ? STDERR_FILENO : STDOUT_FILENO) == -1){
 			perror("smash error: close failed");
       delete this;
@@ -615,7 +531,6 @@ void PipeCommand::execute(){
     exit(EXIT_SUCCESS);
   }
 
-
   if(close(my_pipe[PIPE_READ]) == -1 || close(my_pipe[PIPE_WRITE])){
     perror("smash error: close failed");
       return;	
@@ -626,7 +541,6 @@ void PipeCommand::execute(){
       return;
   }
 }
-
 
 /*****************************************************************************************************************/
 //------------------JobList IMPLEMENTATION----------------
@@ -647,7 +561,6 @@ void JobsList::addJob(string cmd_line, pid_t pid, time_t start_time, bool isStop
   }
   else
   {
-
     jobs.push_back(JobEntry(cmd_line, job_i, pid, start_time, state));
   }
 }
@@ -697,10 +610,6 @@ void JobsList::removeFinishedJobs()
       jobs.erase(jobs.begin() + i);
       i--;  // because erase invalidate iterator of vector
     }
-    // else if (retval == -1)
-    // {
-    //   perror("smash error: waitpid failed");
-    // }
   }
 }
 
@@ -731,13 +640,6 @@ void JobsList::removeJobById(int jobId)
   auto end = std::remove_if(jobs.begin(), jobs.end(), [jobId](JobEntry& job){return job.getUID() == jobId;});
 
   jobs.erase(end,jobs.end()); // Erase-remove idiom
-
-  // for (size_t i = 0; i < jobs.size(); i++)
-  //   if (jobs[i].getUID() == jobId)
-  //   {
-  //     jobs.erase(jobs.begin() + i);
-  //     i--;  // because erase invalidate iterator of vector
-  //   }
 }
 
 JobEntry& JobsList::getLastJob()
@@ -806,25 +708,17 @@ void KillCommand::execute()
       perror("smash error: kill failed");
       return;
     }
-    // should we wait()?
 
     std::cout << "signal number " << signum << " was sent to pid " << job_pid << std::endl;
     
     if (signum == SIGTSTP)
     {
-      // should we handle it?
       job.setState(JobState::STOP);
     }
     else if (signum == SIGCONT && job.getState() == JobState::STOP)
     { 
       job.setState(JobState::RUNNING);
     }
-    // else
-    // {
-    //   // for any signal need to remove?
-    //   jlist->removeJobById(jobID);
-    // }
-    
   }
   catch(const std::exception& e)
   {
@@ -979,24 +873,6 @@ void HeadCommand::execute()
   else // args_size == 2
     file_name = args[1];
 
-  // ifstream file(file_name);
-  // if (!file.is_open())
-  // {
-  //   perror("smash error: open failed");
-  //   return;
-  // }
-
-  // std::string line;
-  // for (; std::getline(file,line) && n > 0; n--)
-  // {
-  //   std::cout << line << std::endl;
-  // }
-
-  // if (file.bad())
-  //   perror("smash error: read failed");
-  
-  // file.close();
-
   FILE* fp = fopen(file_name.c_str(),"r");
   if (!fp)
   {
@@ -1019,7 +895,6 @@ void HeadCommand::execute()
   
   if (res != "" && n > 0)
   {
-    // res.pop_back();
     std::cout << res;
   }
 
