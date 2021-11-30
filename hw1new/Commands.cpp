@@ -592,7 +592,6 @@ void JobsList::killAllJobs()
   {
     // pid_t retval = waitpid(job.getPID(), nullptr, WNOHANG);
     // if( retval != 0 && retval != -1 )
-
     std::cout << job.getPID() << ": " << job.getCmd() << std::endl;
     
     if (kill(job.getPID(), SIGKILL) == -1)
@@ -600,17 +599,15 @@ void JobsList::killAllJobs()
   }
 }
 
+bool checkFunc(JobEntry& job) { return job.getPID() == 1; }
 void JobsList::removeFinishedJobs()
 {
-  for(unsigned int i = 0; i < jobs.size(); i++)
-  { 
-    pid_t retval = waitpid(jobs[i].getPID(), nullptr, WNOHANG);
-    if( retval != 0 && retval != -1 )
-    {
-      jobs.erase(jobs.begin() + i);
-      i--;  // because erase invalidate iterator of vector
-    }
-  }
+  auto end = std::remove_if(jobs.begin(), jobs.end(), [](JobEntry& job){
+    pid_t retval = waitpid(job.getPID(), nullptr, WNOHANG);
+    return (retval != 0 && retval != -1 );
+  });
+
+  jobs.erase(end,jobs.end()); // Erase-remove idiom
 }
 
 JobEntry& JobsList::getJobByPID(pid_t pid)
