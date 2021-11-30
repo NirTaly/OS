@@ -81,8 +81,19 @@ void _removeBackgroundSign(char* cmd_line) {
   cmd_line[str.find_last_not_of(WHITESPACE, idx) + 1] = 0;
 }
 
-Command::Command(const char* cmd_line) : cmd_line(cmd_line), pid(0) {
-  args_size = _parseCommandLine(cmd_line, args);
+Command::Command(const char* cmd_line, bool isBuiltin) : cmd_line(cmd_line), pid(0), isBuiltin(isBuiltin) {
+  string str(cmd_line);
+
+  if (isBuiltin && _isBackgroundComamnd(cmd_line))
+  {
+    for(int i = str.size()-1; i >=0; i--){
+      if(str[i] == '&'){
+        str[i] = ' ';
+        break;
+      }
+    }
+  }
+  args_size = _parseCommandLine(str.c_str(), args);
 }
 
 Command::~Command(){
@@ -124,6 +135,7 @@ bool SmallShell::isAlive() { return is_alive; }
 Command* SmallShell::CreateCommand(const char* cmd_line) {
   string cmd_s = _trim(string(cmd_line));
   string firstWord = cmd_s.substr(0, cmd_s.find_first_of(" \n&"));
+  // string firstWord = cmd_s.substr(0, cmd_s.find_first_of(" \n"));
   
   if(strstr(cmd_line, "|") != NULL){
 	return new PipeCommand(cmd_line);  
@@ -622,6 +634,9 @@ void JobsList::killAllJobs()
   std::cout << "smash: sending SIGKILL signal to " << jobs.size() << " jobs:" << std::endl;
   for (const JobEntry& job : jobs)
   {
+    // pid_t retval = waitpid(job.getPID(), nullptr, WNOHANG);
+    // if( retval != 0 && retval != -1 )
+
     std::cout << job.getPID() << ": " << job.getCmd() << std::endl;
     
     if (kill(job.getPID(), SIGKILL) == -1)
@@ -714,7 +729,6 @@ void JobsCommand::execute()
 {
   JobsList* jlist = SmallShell::getInstance().getJobList();
 
-  // jlist->removeFinishedJobs();
   jlist->printJobsList();
 }
 
