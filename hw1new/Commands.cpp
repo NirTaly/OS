@@ -520,24 +520,57 @@ void PipeCommand::execute(){
 			perror("smash error: setpgrp failed");
       exit(EXIT_FAILURE);
 		}
-		if(dup2(my_pipe[PIPE_WRITE],is_stderr_pipe ? STDERR_FILENO : STDOUT_FILENO) == -1){
-			perror("smash error: dup2 failed");
-      exit(EXIT_FAILURE);
-		}
+    // if (is_stderr_pipe)
+    // {
+    //   if(dup2(my_pipe[PIPE_WRITE],STDERR_FILENO) == -1){
+    //     perror("smash error: dup2 failed");
+    //     exit(EXIT_FAILURE);
+    //   }
+    // }
+    // if(dup2(my_pipe[PIPE_WRITE], STDOUT_FILENO) == -1){
+    //   perror("smash error: dup2 failed");
+    //   exit(EXIT_FAILURE);
+    // }
+
+    if(dup2(my_pipe[PIPE_WRITE], is_stderr_pipe ? STDERR_FILENO : STDOUT_FILENO) == -1){
+        perror("smash error: dup2 failed");
+        exit(EXIT_FAILURE);
+    }
+
 		if((close(my_pipe[PIPE_READ]) == -1) || (close(my_pipe[PIPE_WRITE]) == -1)){
 			perror("smash error: close failed");
       exit(EXIT_FAILURE);
 		}
     
 		SmallShell& smash = SmallShell::getInstance();
-		smash.executeCommand(first_cmd.c_str());
+    try{
+      smash.executeCommand(first_cmd.c_str());
+    } catch(const std::exception& e) {
+      std::cerr << "smash error: " << e.what() << '\n';
+    }
     
+    
+    // if (is_stderr_pipe)
+    // {
+    //   if(close(STDERR_FILENO) == -1){
+    //     perror("smash error: close failed");
+    //     delete this;
+    //     exit(EXIT_FAILURE);
+		//   }
+    // }
+
+    // if(close(STDOUT_FILENO) == -1){
+		// 	perror("smash error: close failed");
+    //   delete this;
+    //   exit(EXIT_FAILURE);
+		// }
+
     if(close(is_stderr_pipe ? STDERR_FILENO : STDOUT_FILENO) == -1){
 			perror("smash error: close failed");
       delete this;
       exit(EXIT_FAILURE);
 		}
-
+    
     delete this;
     exit(EXIT_SUCCESS);
 	}
@@ -560,8 +593,12 @@ void PipeCommand::execute(){
 		}
 	
     SmallShell& smash = SmallShell::getInstance();
-    smash.executeCommand(second_cmd.c_str());
-
+    try{
+      smash.executeCommand(second_cmd.c_str());
+    } catch(const std::exception& e) {
+      std::cerr << "smash error: " << e.what() << '\n';
+    }
+    
     if(close(fd_stdin_save) == -1){
 			perror("smash error: close failed");
       delete this;
@@ -654,10 +691,10 @@ void JobsList::removeFinishedJobs()
       jobs.erase(jobs.begin() + i);
       i--;  // because erase invalidate iterator of vector
     }
-    else if (retval == -1)
-    {
-      perror("smash error: waitpid failed");
-    }
+    // else if (retval == -1)
+    // {
+    //   perror("smash error: waitpid failed");
+    // }
   }
 }
 
