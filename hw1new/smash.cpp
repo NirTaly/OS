@@ -18,6 +18,12 @@ int main(int argc, char* argv[]) {
 
     struct sigaction new_act;
     bzero(&new_act, sizeof(struct sigaction));
+<<<<<<< Updated upstream
+=======
+    //
+    // alarm(15);
+    //
+>>>>>>> Stashed changes
 
     new_act.sa_sigaction = alarmHandler;
     new_act.sa_flags = SA_SIGINFO | SA_RESTART;
