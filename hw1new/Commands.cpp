@@ -129,6 +129,10 @@ void SmallShell::quit() { is_alive = false; }
 
 bool SmallShell::isAlive() { return is_alive; }
 
+TO_PQ& SmallShell::getPQ(){
+  return pq;
+}
+
 /**
 * Creates and returns a pointer to Command class which matches the given command line (cmd_line)
 */
@@ -207,6 +211,76 @@ char** SmallShell::getPrevDir()
 }
 /*****************************************************************************************************************/
 //-------------------Commands IMPLEMENTATION----------------
+
+TimeOutCommand::TimeOutCommand(const char* cmd_line) : BuiltInCommand(cmd_line) {
+  duration = std::stoi(std::string(args[1]));
+  // to_cmd = std::string(args[2]);
+  int i = 2;
+  while(i < args_size){
+    to_cmd += std::string(args[i]);
+    to_cmd += " ";
+    i++;
+  }
+}
+
+
+void TimeOutCommand::execute(){
+  if(duration <= 0){
+    return;
+  }
+  char clean_cmd_copy[COMMAND_ARGS_MAX_LENGTH];//just because passing cmd_line to helper functions doesnt work
+	strcpy(clean_cmd_copy,to_cmd.c_str());
+  bool bg_run = false;
+	if(_isBackgroundComamnd(clean_cmd_copy)){
+      bg_run = true;
+		_removeBackgroundSign(clean_cmd_copy);
+	}
+
+  SmallShell& smash = SmallShell::getInstance();
+  int pid = fork();
+	if(pid < 0){
+		perror("smash error: fork failed");
+        return;
+	}
+  else if(pid == 0){
+    Command* p_cmd = new ExternalCommand(cmd_line, true);//assuming it's an external command
+    p_cmd->execute();
+    delete p_cmd;
+  }
+  else{
+    time_t ts = time(NULL);
+    to_node my_node(ts, duration, pid, cmd_line);
+    smash.getPQ().push(my_node);
+    if(smash.getPQ().top() == my_node){
+      alarm(my_node.end_time-time(NULL));
+    }
+
+    if(bg_run == true){
+			//parent do not need to wait
+			JobsList* jlist = SmallShell::getInstance().getJobList();
+			int tmp_pid = this->pid; 
+			this->pid = pid;//to get son's pid and not the parent's
+			jlist->addJob(this);	
+			this->pid = tmp_pid;//restore shell pid
+		}
+		else{//parent(shell) need to wait
+      // JobEntry fg_job = SmallShell::getInstance().getFGJob();//delete at the end
+      SmallShell::getInstance().setFGJob(JobEntry(cmd_line,0,pid));
+
+      this->pid = pid;  // enable us to use signal handler ctrl-C
+			int status;
+			if(waitpid(pid,&status,WUNTRACED) == -1 ){//WUNTRACED make father stop waiting when the son was stopped
+        perror("smash error: waitpid failed");
+        return;
+      }
+		}
+    
+  }
+}
+
+
+
+
 
 RedirectionCommand::RedirectionCommand(const char* cmd_line) : Command(cmd_line), is_append(0) {
 	full_str_cmd = cmd_line;
@@ -329,20 +403,24 @@ void ExternalCommand::execute(){
 		_removeBackgroundSign(clean_cmd_copy);
 	}
 	if(pid == 0){
-		if(setpgrp() != -1){
+		if(!is_to_cmd && (setpgrp() == -1)){
+      perror("smash error: setpgrp failed");
+      delete this;
+      exit(EXIT_FAILURE);
+    }
 			char* const execv_argv[4] = {(char*)"/bin/bash",(char*)"-c",clean_cmd_copy,nullptr}; 
 			if(execv(execv_argv[0],execv_argv) == -1){
 				perror("smash error: exec failed");
         delete this;
         exit(EXIT_FAILURE);
 			}
-		}
-		else{
-      perror("smash error: setpgrp failed");
-      delete this;
-      exit(EXIT_FAILURE);
-		}
-	}
+		
+		// else{
+    //   perror("smash error: setpgrp failed");
+    //   delete this;
+    //   exit(EXIT_FAILURE);
+		// }
+  }
 	else{
 		if(bg_run == true){
 			//parent do not need to wait
@@ -353,7 +431,7 @@ void ExternalCommand::execute(){
 			this->pid = tmp_pid;//restore shell pid
 		}
 		else{//parent(shell) need to wait
-      JobEntry fg_job = SmallShell::getInstance().getFGJob();
+      JobEntry fg_job = SmallShell::getInstance().getFGJob();//delete at the end
       SmallShell::getInstance().setFGJob(JobEntry(cmd_line,0,pid));
 
       this->pid = pid;  // enable us to use signal handler ctrl-C
