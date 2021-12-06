@@ -1,5 +1,7 @@
 #include <iostream>
 #include <signal.h>
+#include <sys/types.h>
+#include <sys/wait.h>
 
 #include "signals.h"
 #include "Commands.h"
@@ -11,6 +13,7 @@ void ctrlZHandler(int sig_num) {
 
   SmallShell& smash = SmallShell::getInstance();
   JobEntry fg_job = smash.getFGJob();
+
   if (fg_job.getPID() != smash.getSmashPid())
   {
     if (kill(fg_job.getPID(), SIGTSTP) == -1)
@@ -44,15 +47,17 @@ void ctrlCHandler(int sig_num){
 
 void alarmHandler(int sig, siginfo_t *siginfo, void *context)
 {
-  std::cout << "smash got an alarm" << std::endl;
+  std::cout << "smash: got an alarm" << std::endl;
   SmallShell& smash = SmallShell::getInstance();
-  //new
-  TO_PQ pq =  smash.getPQ();
+
+  TO_PQ& pq =  smash.getPQ();
   bool is_timeout = false;
   to_node top_node;
   if(!pq.empty()){
+
     top_node = pq.top();
     is_timeout = (difftime(time(NULL),top_node.end_time) >= 0);
+    
     if(!is_timeout){
       alarm(top_node.end_time - time(NULL));
     }
@@ -64,8 +69,17 @@ void alarmHandler(int sig, siginfo_t *siginfo, void *context)
       }
     }
   }
-  //end new
+
   pid_t send_alarm_pid = is_timeout ? top_node.pid : siginfo->si_pid;
+
+  if (is_timeout)
+  {
+    int status;
+    int retval = waitpid(top_node.pid, &status, WNOHANG);
+
+    if ((retval != 0))
+      return;
+  }
 
   if(smash.getSmashPid() != send_alarm_pid){
     if(kill(send_alarm_pid, SIGKILL) == -1){
@@ -84,7 +98,7 @@ void alarmHandler(int sig, siginfo_t *siginfo, void *context)
     }
     else{
       JobEntry& send_job = smash.getJobList()->getJobByPID(send_alarm_pid);
-      sender_cmd = send_job.getCmd();//is_timeout ? top_node.full_cmd : 
+      sender_cmd = send_job.getCmd();
     }
     std::cout << "smash: " << sender_cmd << " timed out!" << std::endl;
   }

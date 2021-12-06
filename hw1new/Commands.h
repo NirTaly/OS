@@ -190,8 +190,8 @@ struct to_node{
   pid_t pid;
   std::string full_cmd;
   to_node() = default;
-  to_node(int timestamp, int duration, int pid, std::string full_cmd) : timestamp(timestamp), duration(duration), end_time(duration+timestamp), pid(pid),
-        full_cmd(full_cmd){}
+  to_node(int timestamp, int duration, int pid, std::string full_cmd) : 
+    timestamp(timestamp), duration(duration), end_time(duration+timestamp), pid(pid), full_cmd(full_cmd){}
   bool operator==(const to_node& other) const{
     return (pid == other.pid);
   }
@@ -203,7 +203,7 @@ struct to_node{
 class Compare{
 public:
     bool operator() (const to_node& n1, const to_node& n2){
-        return n1 < n2;
+        return n2 < n1;
     }
 };
 

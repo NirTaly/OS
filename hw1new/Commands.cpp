@@ -83,8 +83,9 @@ void _removeBackgroundSign(char* cmd_line) {
 
 Command::Command(const char* cmd_line, bool isBuiltin) : cmd_line(cmd_line), pid(0), isBuiltin(isBuiltin) {
   string str(cmd_line);
+  string firstWord = str.substr(0, str.find_first_of(" \n&"));
 
-  if (isBuiltin && _isBackgroundComamnd(cmd_line))
+  if (isBuiltin && _isBackgroundComamnd(cmd_line) && firstWord.compare("timeout") != 0)
   {
     for(int i = str.size()-1; i >=0; i--){
       if(str[i] == '&'){
@@ -138,7 +139,7 @@ TO_PQ& SmallShell::getPQ(){
 */
 Command* SmallShell::CreateCommand(const char* cmd_line) {
   string cmd_s = _trim(string(cmd_line));
-  string firstWord = cmd_s.substr(0, cmd_s.find_first_of(" \n&"));
+  string firstWord = cmd_s.substr(0, cmd_s.find_first_of(" \n"));
   
   if(strstr(cmd_line, "|") != NULL){
 	return new PipeCommand(cmd_line);  
@@ -175,6 +176,9 @@ Command* SmallShell::CreateCommand(const char* cmd_line) {
   }
   else if (firstWord.compare("head") == 0) {
     return new HeadCommand(cmd_line);
+  }
+  else if (firstWord.compare("timeout") == 0) {
+    return new TimeOutCommand(cmd_line);
   }
   else {
     return new ExternalCommand(cmd_line);
@@ -232,7 +236,7 @@ void TimeOutCommand::execute(){
 	strcpy(clean_cmd_copy,to_cmd.c_str());
   bool bg_run = false;
 	if(_isBackgroundComamnd(clean_cmd_copy)){
-      bg_run = true;
+    bg_run = true;
 		_removeBackgroundSign(clean_cmd_copy);
 	}
 
@@ -242,10 +246,18 @@ void TimeOutCommand::execute(){
 		perror("smash error: fork failed");
         return;
 	}
-  else if(pid == 0){
-    Command* p_cmd = new ExternalCommand(cmd_line, true);//assuming it's an external command
-    p_cmd->execute();
-    delete p_cmd;
+  if(pid == 0){
+		if(setpgrp() == -1){
+      perror("smash error: setpgrp failed");
+      delete this;
+      exit(EXIT_FAILURE);
+    }
+			char* const execv_argv[4] = {(char*)"/bin/bash",(char*)"-c",clean_cmd_copy,nullptr}; 
+			if(execv(execv_argv[0],execv_argv) == -1){
+				perror("smash error: exec failed");
+        delete this;
+        exit(EXIT_FAILURE);
+			}
   }
   else{
     time_t ts = time(NULL);
@@ -399,7 +411,7 @@ void ExternalCommand::execute(){
 	strcpy(clean_cmd_copy,cmd_line);
 	bool bg_run = false;
 	if(_isBackgroundComamnd(clean_cmd_copy)){
-        bg_run = true;
+    bg_run = true;
 		_removeBackgroundSign(clean_cmd_copy);
 	}
 	if(pid == 0){
@@ -408,12 +420,13 @@ void ExternalCommand::execute(){
       delete this;
       exit(EXIT_FAILURE);
     }
-			char* const execv_argv[4] = {(char*)"/bin/bash",(char*)"-c",clean_cmd_copy,nullptr}; 
-			if(execv(execv_argv[0],execv_argv) == -1){
-				perror("smash error: exec failed");
-        delete this;
-        exit(EXIT_FAILURE);
-			}
+   
+    char* const execv_argv[4] = {(char*)"/bin/bash",(char*)"-c",clean_cmd_copy,nullptr}; 
+    if(execv(execv_argv[0],execv_argv) == -1){
+      perror("smash error: exec failed");
+      delete this;
+      exit(EXIT_FAILURE);
+    }
 		
 		// else{
     //   perror("smash error: setpgrp failed");
