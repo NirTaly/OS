@@ -2,6 +2,7 @@
 #define SMASH_COMMAND_H_
 
 #include <vector>
+#include <queue>
 #include <time.h>
 #include <string>
 #include <exception>
@@ -44,8 +45,9 @@ public:
 };
 
 class ExternalCommand : public Command {
+  bool is_to_cmd;
 public:
-  ExternalCommand(const char* cmd_line) : Command(cmd_line) { }
+  ExternalCommand(const char* cmd_line, bool is_to_cmd = false) : Command(cmd_line), is_to_cmd(is_to_cmd) { }
   virtual ~ExternalCommand() {}
   void execute() override;
 };
@@ -149,6 +151,15 @@ public:
   void execute() override;
 };
 
+class TimeOutCommand : public BuiltInCommand {
+   int duration;
+   std::string to_cmd; 
+public:
+  TimeOutCommand(const char* cmd_line);
+  virtual ~TimeOutCommand() {}
+  void execute() override;
+};
+
 class JobsList;
 
 enum JobState {RUNNING, STOP};
@@ -172,7 +183,31 @@ private:
   JobState state;
 };
 
+struct to_node{
+  time_t timestamp;
+  time_t duration;
+  time_t end_time;
+  pid_t pid;
+  std::string full_cmd;
+  to_node() = default;
+  to_node(int timestamp, int duration, int pid, std::string full_cmd) : timestamp(timestamp), duration(duration), end_time(duration+timestamp), pid(pid),
+        full_cmd(full_cmd){}
+  bool operator==(const to_node& other) const{
+    return (pid == other.pid);
+  }
+  bool operator<(const to_node& other) const{
+    return (end_time < other.end_time);
+  }
+};
 
+class Compare{
+public:
+    bool operator() (const to_node& n1, const to_node& n2){
+        return n1 < n2;
+    }
+};
+
+using TO_PQ = std::priority_queue<to_node,std::vector<to_node>,Compare>;
 class SmallShell {
 public:
   Command* CreateCommand(const char* cmd_line);
@@ -196,6 +231,7 @@ public:
   char** getPrevDir();
   void quit();
   bool isAlive();
+  TO_PQ& getPQ();
 
 private:
   std::string prompt;
@@ -204,7 +240,7 @@ private:
   char* prev_dir;
   bool is_alive;
   JobEntry fg_job;
-
+  std::priority_queue<to_node,std::vector<to_node>,Compare> pq;
   SmallShell();
 };
 

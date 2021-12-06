@@ -45,11 +45,28 @@ void ctrlCHandler(int sig_num){
 void alarmHandler(int sig, siginfo_t *siginfo, void *context)
 {
   std::cout << "smash got an alarm" << std::endl;
-
-  pid_t send_alarm_pid = siginfo->si_pid;
-
   SmallShell& smash = SmallShell::getInstance();
-  
+  //new
+  TO_PQ pq =  smash.getPQ();
+  bool is_timeout = false;
+  to_node top_node;
+  if(!pq.empty()){
+    top_node = pq.top();
+    is_timeout = (difftime(time(NULL),top_node.end_time) >= 0);
+    if(!is_timeout){
+      alarm(top_node.end_time - time(NULL));
+    }
+    else{
+      pq.pop();
+      if(!pq.empty()){
+        to_node new_top_node = pq.top();
+        alarm(new_top_node.end_time - time(NULL));
+      }
+    }
+  }
+  //end new
+  pid_t send_alarm_pid = is_timeout ? top_node.pid : siginfo->si_pid;
+
   if(smash.getSmashPid() != send_alarm_pid){
     if(kill(send_alarm_pid, SIGKILL) == -1){
         perror("smash error: kill failed");
@@ -63,11 +80,11 @@ void alarmHandler(int sig, siginfo_t *siginfo, void *context)
     JobEntry fg_job = smash.getFGJob();
 
     if(fg_job.getPID() == send_alarm_pid){
-      sender_cmd = fg_job.getCmd();
+      sender_cmd = is_timeout ? top_node.full_cmd : fg_job.getCmd();
     }
     else{
       JobEntry& send_job = smash.getJobList()->getJobByPID(send_alarm_pid);
-      sender_cmd = send_job.getCmd();
+      sender_cmd = send_job.getCmd();//is_timeout ? top_node.full_cmd : 
     }
     std::cout << "smash: " << sender_cmd << " timed out!" << std::endl;
   }
