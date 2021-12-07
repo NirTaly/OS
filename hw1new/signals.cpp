@@ -8,6 +8,8 @@
 
 using namespace std;
 
+const std::string WHITESPACE = " \n\r\t\f\v";//from piazza
+
 void ctrlZHandler(int sig_num) {
 	std::cout << "smash: got ctrl-Z" << std::endl;
 
@@ -73,15 +75,16 @@ void alarmHandler(int sig, siginfo_t *siginfo, void *context)
 
   pid_t send_alarm_pid = is_timeout ? top_node.pid : siginfo->si_pid;
 
+  int retval = 0;
   if (is_timeout)
   {
     int status;
-    int retval = waitpid(top_node.pid, &status, WNOHANG);
-    if ((retval != 0))
+    retval = waitpid(top_node.pid, &status, WNOHANG);
+    if (retval < 0)
       return;
   }
 
-  if(smash.getSmashPid() != send_alarm_pid){
+  if(smash.getSmashPid() != send_alarm_pid && retval == 0){
     if(kill(send_alarm_pid, SIGKILL) == -1){
         perror("smash error: kill failed");
 		    return;
@@ -99,6 +102,14 @@ void alarmHandler(int sig, siginfo_t *siginfo, void *context)
     else{
       JobEntry& send_job = smash.getJobList()->getJobByPID(send_alarm_pid);
       sender_cmd = send_job.getCmd();
+      
+      // if (sender_cmd[sender_cmd.find_last_not_of(WHITESPACE)] == '&')
+      if (retval > 0)
+      {
+        JobEntry& bg_job = smash.getJobList()->getJobByPID(retval);
+        smash.getJobList()->removeJobById(bg_job.getUID());
+        return;
+      }
     }
     std::cout << "smash: " << sender_cmd << " timed out!" << std::endl;
   }

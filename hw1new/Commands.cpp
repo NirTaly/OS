@@ -259,7 +259,7 @@ void TimeOutCommand::execute(){
       delete this;
       exit(EXIT_FAILURE);
     }
-      cout<<"clean_cmd_copy(to): "<< clean_cmd_copy<<endl;
+      // cout<<"clean_cmd_copy(to): "<< clean_cmd_copy<<endl;
 			char* const execv_argv[4] = {(char*)"/bin/bash",(char*)"-c",clean_cmd_copy,nullptr}; 
 			if(execv(execv_argv[0],execv_argv) == -1){
 				perror("smash error: exec failed");
@@ -272,8 +272,8 @@ void TimeOutCommand::execute(){
     time_t ts = time(NULL);
     to_node my_node(ts, duration, pid, cmd_line);
     smash.getPQ().push(my_node);
-    cout<<"pq size: "<<smash.getPQ().size()<<endl;
-    cout<<"child pid: "<<pid<<endl;
+    // cout<<"pq size: "<<smash.getPQ().size()<<endl;
+    // cout<<"child pid: "<<pid<<endl;
     if(smash.getPQ().top() == my_node){
       alarm(my_node.end_time-time(NULL));
     }
@@ -430,7 +430,7 @@ void ExternalCommand::execute(){
       delete this;
       exit(EXIT_FAILURE);
     }
-      cout<<"clean_cmd_copy(external): "<< clean_cmd_copy<<endl;
+      // cout<<"clean_cmd_copy(external): "<< clean_cmd_copy<<endl;
 
     char* const execv_argv[4] = {(char*)"/bin/bash",(char*)"-c",clean_cmd_copy,nullptr}; 
     if(execv(execv_argv[0],execv_argv) == -1){
@@ -703,10 +703,11 @@ bool checkFunc(JobEntry& job) { return job.getPID() == 1; }
 void JobsList::removeFinishedJobs()
 {
   auto end = std::remove_if(jobs.begin(), jobs.end(), [](JobEntry& job){
-    pid_t retval = waitpid(job.getPID(), nullptr, WNOHANG);
+    int status;
+    pid_t retval = waitpid(job.getPID(), &status, WNOHANG);
     // cout<<"retval is: "<<retval<<endl;
-    // return (retval != 0 && retval != -1 );
-    return (retval != 0);
+    return (retval != 0 && retval != -1 );
+    // return (retval != 0);
   });
 
   jobs.erase(end,jobs.end()); // Erase-remove idiom
