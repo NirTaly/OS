@@ -259,17 +259,21 @@ void TimeOutCommand::execute(){
       delete this;
       exit(EXIT_FAILURE);
     }
+      cout<<"clean_cmd_copy(to): "<< clean_cmd_copy<<endl;
 			char* const execv_argv[4] = {(char*)"/bin/bash",(char*)"-c",clean_cmd_copy,nullptr}; 
 			if(execv(execv_argv[0],execv_argv) == -1){
 				perror("smash error: exec failed");
         delete this;
         exit(EXIT_FAILURE);
 			}
+      
   }
   else{
     time_t ts = time(NULL);
     to_node my_node(ts, duration, pid, cmd_line);
     smash.getPQ().push(my_node);
+    cout<<"pq size: "<<smash.getPQ().size()<<endl;
+    cout<<"child pid: "<<pid<<endl;
     if(smash.getPQ().top() == my_node){
       alarm(my_node.end_time-time(NULL));
     }
@@ -283,7 +287,7 @@ void TimeOutCommand::execute(){
 			this->pid = tmp_pid;//restore shell pid
 		}
 		else{//parent(shell) need to wait
-      // JobEntry fg_job = SmallShell::getInstance().getFGJob();//delete at the end
+      JobEntry fg_job = SmallShell::getInstance().getFGJob();//delete at the end
       SmallShell::getInstance().setFGJob(JobEntry(cmd_line,0,pid));
 
       this->pid = pid;  // enable us to use signal handler ctrl-C
@@ -293,7 +297,6 @@ void TimeOutCommand::execute(){
         return;
       }
 		}
-    
   }
 }
 
@@ -427,7 +430,8 @@ void ExternalCommand::execute(){
       delete this;
       exit(EXIT_FAILURE);
     }
-   
+      cout<<"clean_cmd_copy(external): "<< clean_cmd_copy<<endl;
+
     char* const execv_argv[4] = {(char*)"/bin/bash",(char*)"-c",clean_cmd_copy,nullptr}; 
     if(execv(execv_argv[0],execv_argv) == -1){
       perror("smash error: exec failed");
@@ -457,9 +461,9 @@ void ExternalCommand::execute(){
       this->pid = pid;  // enable us to use signal handler ctrl-C
 			int status;
 			if(waitpid(pid,&status,WUNTRACED) == -1 ){//WUNTRACED make father stop waiting when the son was stopped
-                perror("smash error: waitpid failed");
-                return;
-            }
+        perror("smash error: waitpid failed");
+        return;
+      }
 		}
 	}
 }
@@ -700,7 +704,9 @@ void JobsList::removeFinishedJobs()
 {
   auto end = std::remove_if(jobs.begin(), jobs.end(), [](JobEntry& job){
     pid_t retval = waitpid(job.getPID(), nullptr, WNOHANG);
-    return (retval != 0 && retval != -1 );
+    // cout<<"retval is: "<<retval<<endl;
+    // return (retval != 0 && retval != -1 );
+    return (retval != 0);
   });
 
   jobs.erase(end,jobs.end()); // Erase-remove idiom

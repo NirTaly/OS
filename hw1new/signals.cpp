@@ -57,7 +57,6 @@ void alarmHandler(int sig, siginfo_t *siginfo, void *context)
 
     top_node = pq.top();
     is_timeout = (difftime(time(NULL),top_node.end_time) >= 0);
-    
     if(!is_timeout){
       alarm(top_node.end_time - time(NULL));
     }
@@ -67,6 +66,8 @@ void alarmHandler(int sig, siginfo_t *siginfo, void *context)
         to_node new_top_node = pq.top();
         alarm(new_top_node.end_time - time(NULL));
       }
+      // cout<<"the process "<<top_node.pid<<" is"<<(kill(top_node.pid, 0) ? " alive" : " NOT alive")<<endl;
+      // cout<<"waitpid("<<top_node.pid<<", nullptr, "<<"WNOHANG) = "<<waitpid(top_node.pid, nullptr,WNOHANG)<<endl;
     }
   }
 
@@ -76,7 +77,6 @@ void alarmHandler(int sig, siginfo_t *siginfo, void *context)
   {
     int status;
     int retval = waitpid(top_node.pid, &status, WNOHANG);
-
     if ((retval != 0))
       return;
   }
