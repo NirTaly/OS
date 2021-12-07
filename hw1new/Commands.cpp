@@ -139,7 +139,7 @@ TO_PQ& SmallShell::getPQ(){
 */
 Command* SmallShell::CreateCommand(const char* cmd_line) {
   string cmd_s = _trim(string(cmd_line));
-  string firstWord = cmd_s.substr(0, cmd_s.find_first_of(" \n"));
+  string firstWord = cmd_s.substr(0, cmd_s.find_first_of(" \n&"));
   
   if(strstr(cmd_line, "|") != NULL){
 	return new PipeCommand(cmd_line);  
@@ -217,8 +217,13 @@ char** SmallShell::getPrevDir()
 //-------------------Commands IMPLEMENTATION----------------
 
 TimeOutCommand::TimeOutCommand(const char* cmd_line) : BuiltInCommand(cmd_line) {
-  duration = std::stoi(std::string(args[1]));
-  // to_cmd = std::string(args[2]);
+  try
+  {
+    duration = std::stoi(std::string(args[1]));
+  } catch (const std::exception&) {
+    throw invalid_argument("timeout: invalid arguments");
+  }
+
   int i = 2;
   while(i < args_size){
     to_cmd += std::string(args[i]);
@@ -227,11 +232,13 @@ TimeOutCommand::TimeOutCommand(const char* cmd_line) : BuiltInCommand(cmd_line) 
   }
 }
 
-
 void TimeOutCommand::execute(){
   if(duration <= 0){
     return;
   }
+  if (args_size < 3)
+    throw invalid_argument("timeout: invalid arguments");
+
   char clean_cmd_copy[COMMAND_ARGS_MAX_LENGTH];//just because passing cmd_line to helper functions doesnt work
 	strcpy(clean_cmd_copy,to_cmd.c_str());
   bool bg_run = false;
@@ -681,8 +688,6 @@ void JobsList::killAllJobs()
   std::cout << "smash: sending SIGKILL signal to " << jobs.size() << " jobs:" << std::endl;
   for (const JobEntry& job : jobs)
   {
-    // pid_t retval = waitpid(job.getPID(), nullptr, WNOHANG);
-    // if( retval != 0 && retval != -1 )
     std::cout << job.getPID() << ": " << job.getCmd() << std::endl;
     
     if (kill(job.getPID(), SIGKILL) == -1)
