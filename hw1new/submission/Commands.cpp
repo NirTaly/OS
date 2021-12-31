@@ -83,8 +83,9 @@ void _removeBackgroundSign(char* cmd_line) {
 
 Command::Command(const char* cmd_line, bool isBuiltin) : cmd_line(cmd_line), pid(0), isBuiltin(isBuiltin) {
   string str(cmd_line);
+  string firstWord = str.substr(0, str.find_first_of(" \n&"));
 
-  if (isBuiltin && _isBackgroundComamnd(cmd_line))
+  if (isBuiltin && _isBackgroundComamnd(cmd_line) && firstWord.compare("timeout") != 0)
   {
     for(int i = str.size()-1; i >=0; i--){
       if(str[i] == '&'){
@@ -129,6 +130,10 @@ void SmallShell::quit() { is_alive = false; }
 
 bool SmallShell::isAlive() { return is_alive; }
 
+TO_PQ& SmallShell::getPQ(){
+  return pq;
+}
+
 /**
 * Creates and returns a pointer to Command class which matches the given command line (cmd_line)
 */
@@ -172,6 +177,9 @@ Command* SmallShell::CreateCommand(const char* cmd_line) {
   else if (firstWord.compare("head") == 0) {
     return new HeadCommand(cmd_line);
   }
+  else if (firstWord.compare("timeout") == 0) {
+    return new TimeOutCommand(cmd_line);
+  }
   else {
     return new ExternalCommand(cmd_line);
   }
@@ -207,6 +215,94 @@ char** SmallShell::getPrevDir()
 }
 /*****************************************************************************************************************/
 //-------------------Commands IMPLEMENTATION----------------
+
+TimeOutCommand::TimeOutCommand(const char* cmd_line) : BuiltInCommand(cmd_line) {
+  try
+  {
+    duration = std::stoi(std::string(args[1]));
+  } catch (const std::exception&) {
+    throw invalid_argument("timeout: invalid arguments");
+  }
+
+  int i = 2;
+  while(i < args_size){
+    to_cmd += std::string(args[i]);
+    to_cmd += " ";
+    i++;
+  }
+}
+
+void TimeOutCommand::execute(){
+  if(duration <= 0){
+    return;
+  }
+  if (args_size < 3)
+    throw invalid_argument("timeout: invalid arguments");
+
+  char clean_cmd_copy[COMMAND_ARGS_MAX_LENGTH];//just because passing cmd_line to helper functions doesnt work
+	strcpy(clean_cmd_copy,to_cmd.c_str());
+  bool bg_run = false;
+	if(_isBackgroundComamnd(clean_cmd_copy)){
+    bg_run = true;
+		_removeBackgroundSign(clean_cmd_copy);
+	}
+
+  SmallShell& smash = SmallShell::getInstance();
+  int pid = fork();
+	if(pid < 0){
+		perror("smash error: fork failed");
+        return;
+	}
+  if(pid == 0){
+		if(setpgrp() == -1){
+      perror("smash error: setpgrp failed");
+      delete this;
+      exit(EXIT_FAILURE);
+    }
+      // cout<<"clean_cmd_copy(to): "<< clean_cmd_copy<<endl;
+			char* const execv_argv[4] = {(char*)"/bin/bash",(char*)"-c",clean_cmd_copy,nullptr}; 
+			if(execv(execv_argv[0],execv_argv) == -1){
+				perror("smash error: exec failed");
+        delete this;
+        exit(EXIT_FAILURE);
+			}
+      
+  }
+  else{
+    time_t ts = time(NULL);
+    to_node my_node(ts, duration, pid, cmd_line);
+    smash.getPQ().push(my_node);
+    // cout<<"pq size: "<<smash.getPQ().size()<<endl;
+    // cout<<"child pid: "<<pid<<endl;
+    if(smash.getPQ().top() == my_node){
+      alarm(my_node.end_time-time(NULL));
+    }
+
+    if(bg_run == true){
+			//parent do not need to wait
+			JobsList* jlist = SmallShell::getInstance().getJobList();
+			int tmp_pid = this->pid; 
+			this->pid = pid;//to get son's pid and not the parent's
+			jlist->addJob(this);	
+			this->pid = tmp_pid;//restore shell pid
+		}
+		else{//parent(shell) need to wait
+      JobEntry fg_job = SmallShell::getInstance().getFGJob();//delete at the end
+      SmallShell::getInstance().setFGJob(JobEntry(cmd_line,0,pid));
+
+      this->pid = pid;  // enable us to use signal handler ctrl-C
+			int status;
+			if(waitpid(pid,&status,WUNTRACED) == -1 ){//WUNTRACED make father stop waiting when the son was stopped
+        perror("smash error: waitpid failed");
+        return;
+      }
+		}
+  }
+}
+
+
+
+
 
 RedirectionCommand::RedirectionCommand(const char* cmd_line) : Command(cmd_line), is_append(0) {
 	full_str_cmd = cmd_line;
@@ -325,24 +421,30 @@ void ExternalCommand::execute(){
 	strcpy(clean_cmd_copy,cmd_line);
 	bool bg_run = false;
 	if(_isBackgroundComamnd(clean_cmd_copy)){
-        bg_run = true;
+    bg_run = true;
 		_removeBackgroundSign(clean_cmd_copy);
 	}
 	if(pid == 0){
-		if(setpgrp() != -1){
-			char* const execv_argv[4] = {(char*)"/bin/bash",(char*)"-c",clean_cmd_copy,nullptr}; 
-			if(execv(execv_argv[0],execv_argv) == -1){
-				perror("smash error: exec failed");
-        delete this;
-        exit(EXIT_FAILURE);
-			}
-		}
-		else{
+		if(!is_to_cmd && (setpgrp() == -1)){
       perror("smash error: setpgrp failed");
       delete this;
       exit(EXIT_FAILURE);
-		}
-	}
+    }
+      // cout<<"clean_cmd_copy(external): "<< clean_cmd_copy<<endl;
+
+    char* const execv_argv[4] = {(char*)"/bin/bash",(char*)"-c",clean_cmd_copy,nullptr}; 
+    if(execv(execv_argv[0],execv_argv) == -1){
+      perror("smash error: exec failed");
+      delete this;
+      exit(EXIT_FAILURE);
+    }
+		
+		// else{
+    //   perror("smash error: setpgrp failed");
+    //   delete this;
+    //   exit(EXIT_FAILURE);
+		// }
+  }
 	else{
 		if(bg_run == true){
 			//parent do not need to wait
@@ -353,15 +455,15 @@ void ExternalCommand::execute(){
 			this->pid = tmp_pid;//restore shell pid
 		}
 		else{//parent(shell) need to wait
-      JobEntry fg_job = SmallShell::getInstance().getFGJob();
+      JobEntry fg_job = SmallShell::getInstance().getFGJob();//delete at the end
       SmallShell::getInstance().setFGJob(JobEntry(cmd_line,0,pid));
 
       this->pid = pid;  // enable us to use signal handler ctrl-C
 			int status;
 			if(waitpid(pid,&status,WUNTRACED) == -1 ){//WUNTRACED make father stop waiting when the son was stopped
-                perror("smash error: waitpid failed");
-                return;
-            }
+        perror("smash error: waitpid failed");
+        return;
+      }
 		}
 	}
 }
@@ -590,8 +692,6 @@ void JobsList::killAllJobs()
   std::cout << "smash: sending SIGKILL signal to " << jobs.size() << " jobs:" << std::endl;
   for (const JobEntry& job : jobs)
   {
-    // pid_t retval = waitpid(job.getPID(), nullptr, WNOHANG);
-    // if( retval != 0 && retval != -1 )
     std::cout << job.getPID() << ": " << job.getCmd() << std::endl;
     
     if (kill(job.getPID(), SIGKILL) == -1)
@@ -603,8 +703,11 @@ bool checkFunc(JobEntry& job) { return job.getPID() == 1; }
 void JobsList::removeFinishedJobs()
 {
   auto end = std::remove_if(jobs.begin(), jobs.end(), [](JobEntry& job){
-    pid_t retval = waitpid(job.getPID(), nullptr, WNOHANG);
+    int status;
+    pid_t retval = waitpid(job.getPID(), &status, WNOHANG);
+    // cout<<"retval is: "<<retval<<endl;
     return (retval != 0 && retval != -1 );
+    // return (retval != 0);
   });
 
   jobs.erase(end,jobs.end()); // Erase-remove idiom
